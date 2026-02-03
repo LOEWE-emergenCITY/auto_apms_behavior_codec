@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>auto_apms_behavior_codec</name>
+  <version>0.0.0</version>
+  <description>Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air mission updates</description>
+  <maintainer email="mueller@fsr.tu-darmstadt.de">robin</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>auto_apms_behavior_tree_core</depend>
+  <depend>auto_apms_behavior_codec_interfaces</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

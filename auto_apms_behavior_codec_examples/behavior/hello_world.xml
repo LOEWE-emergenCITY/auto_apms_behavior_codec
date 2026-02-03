@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+      main_tree_to_execute="Main">
+  <BehaviorTree ID="Main">
+    <Sequence>
+      <SubTree ID="Print"
+               msg="Hello"/>
+      <SubTree ID="Print"
+               msg="World"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="Print">
+    <Logger message="{msg}"
+            level="INFO"/>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <Action ID="Logger">
+      <input_port name="message"
+                  type="BT::AnyTypeAllowed">Message to be logged via rclcpp::Logger.</input_port>
+      <input_port name="level"
+                  default="INFO"
+                  type="std::string">Logger level. Must be one of [UNSET, DEBUG, INFO, WARN, ERROR, FATAL] but is not case sensitive.</input_port>
+    </Action>
+  </TreeNodesModel>
+
+</root>

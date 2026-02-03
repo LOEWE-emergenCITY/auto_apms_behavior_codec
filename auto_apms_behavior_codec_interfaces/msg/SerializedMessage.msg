@@ -1,0 +1,1 @@
+string serialized_message
