@@ -7,6 +7,37 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(auto_apms_behavior_tree_core REQUIRED)
+
+# Add dictionary manager source files
+add_library(dictionary_manager src/dictionary_manager.cpp)
+
+# Add include directory
+target_include_directories(dictionary_manager PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+# Link dictionary manager with auto_apms_behavior_tree_core
+ament_target_dependencies(dictionary_manager PUBLIC auto_apms_behavior_tree_core)
+
+# Add behavior tree encoder executable
+add_executable(behavior_tree_encoder_node src/behavior_tree_encoder.cpp)
+
+# Add include directory to encoder
+target_include_directories(behavior_tree_encoder_node PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+# Link encoder with dependencies
+target_link_libraries(behavior_tree_encoder_node
+  PRIVATE dictionary_manager)
+ament_target_dependencies(behavior_tree_encoder_node PUBLIC rclcpp auto_apms_behavior_tree_core)
+
+# Install the executable
+install(TARGETS behavior_tree_encoder_node
+  DESTINATION lib/${PROJECT_NAME})
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
