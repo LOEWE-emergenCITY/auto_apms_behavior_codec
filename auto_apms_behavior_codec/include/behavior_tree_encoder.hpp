@@ -4,6 +4,7 @@
 #include <string>
 #include "dictionary_manager.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include <memory>
 
 namespace auto_apms_behavior_codec
 {
@@ -15,7 +16,7 @@ namespace auto_apms_behavior_codec
       ~BehaviorTreeEncoder() = default;
       std::vector<uint8_t> encode(const std::string& behavior_tree_yaml);
   private:
-      DictionaryManager dictionary_manager_;
+      std::unique_ptr<DictionaryManager> dictionary_manager_;
   };
 
 } 

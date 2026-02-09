@@ -8,7 +8,6 @@
 
 using namespace auto_apms_behavior_codec;
 
-//currently called 2 times, needs debugging
 bool DictionaryManager::build_dictionary()
 {
   // begin by getting all known node types from the core
@@ -21,18 +20,23 @@ bool DictionaryManager::build_dictionary()
   uint32_t id_counter = 0;
   uint16_t unsupported_nodes = 0;
   for (const auto & node_id : known_node_manifests) {
+
     try {
+      //get node manifest resource for id
       auto_apms_behavior_tree::core::NodeManifestResource manifest_resource = auto_apms_behavior_tree::core::NodeManifestResource(node_id);
+      
+      // get node models from manifest
       auto node_models = manifest_resource.getNodeModel();
       std::map<std::string , auto_apms_behavior_tree::NodeModel>::iterator nodes_iterator;
+      
+      //iterate through node models and add to dictionary if supported
       for(nodes_iterator = node_models.begin(); nodes_iterator != node_models.end(); nodes_iterator++) {
         bool has_unsupported_parameter = false;
-        uint16_t number_int_params = 0;
-        uint16_t number_float_params = 0;
-        uint16_t number_string_params = 0;
-        uint16_t number_bool_params = 0;
         auto_apms_behavior_tree::NodeModel model = nodes_iterator->second;
         std::vector<auto_apms_behavior_tree::NodePortInfo> port_infos = model.port_infos;
+        std::vector<NodePortType> port_types;
+        
+        //iterate through ports, check if they are supported and add them to the node dictionary entry
         for (const auto & port_info : port_infos) {
           if(supported_parameter_types_.find(port_info.port_type) == supported_parameter_types_.end()) {
             RCLCPP_WARN(rclcpp::get_logger("DictionaryManager"), "Node %s has unsupported parameter type %s for port %s. This node will not be supported for encoding/decoding.", nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
@@ -41,37 +45,21 @@ bool DictionaryManager::build_dictionary()
             break;
           }
           else {
-            if(port_info.port_type == "int") {
-              number_int_params++;
-            }
-            else if(port_info.port_type == "float") {
-              number_float_params++;
-            }
-            else if(port_info.port_type == "std::string") {
-              number_string_params++;
-            }
-            else if(port_info.port_type == "bool") {
-              number_bool_params++;
-            }
+            NodePortType node_port_type;
+            node_port_type.name = port_info.port_name;
+            node_port_type.type = port_info.port_type;
+            RCLCPP_DEBUG(rclcpp::get_logger("DictionaryManager"), "Node %s has supported parameter type %s for port %s.", nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
+            port_types.push_back(node_port_type);
           }
           // for debugging, print port info
           //std::cout << "  Port Name: " << port_info.port_name << ", Type: " << port_info.port_type << ", Default: " << port_info.port_default << ", Has Default: " << port_info.port_has_default << ", Description: " << port_info.port_description << ", Direction: " << static_cast<int>(port_info.port_direction) << std::endl;
         }
         //std::cout << "Node Type: " << model.type<< std::endl;
-        DictionaryInfo info(!has_unsupported_parameter, id_counter++, nodes_iterator->first, number_int_params, number_float_params, number_string_params, number_bool_params);
+        DictionaryNode info(!has_unsupported_parameter, id_counter++, nodes_iterator->first, port_types);
         //std::cout << "Added node to dictionary: " << info.name << " with ID " << info.id << " and " << info.number_int_params << " int params, " << info.number_float_params << " float params, " << info.number_string_params << " string params, " << info.number_bool_params << " bool params" << std::endl;
         dictionary_map_.insert({info.name, info});
       }
-      //auto manifest = auto_apms_behavior_tree::core::NodeManifest::fromResource(node_id);
-      //std::vector<std::string> node_names= manifest.getNodeNames();
-      //for (const auto & node_name : node_names) {
-      //  DictionaryInfo info;
-      //  info.id = id_counter++;
-      //  info.name = node_name;
-      //  dictionary_map_[info.name] = info;
-        //todo parameters
-      //  std::cout << "Added node to dictionary: " << info.name << " with ID " << info.id << std::endl;
-      //}
+
     } catch (const std::exception & e) {
       std::cerr << "Error loading node manifest " << std::endl;
     }
@@ -85,16 +73,27 @@ bool DictionaryManager::build_dictionary()
 DictionaryManager::DictionaryManager()
 {
   //constructor must build the dictionary
+  RCLCPP_INFO(rclcpp::get_logger("DictionaryManager"), "Initializing DictionaryManager and building dictionary...");
   build_dictionary();
 }
 
-DictionaryInfo::DictionaryInfo(bool supported, uint32_t id, std::string name, int number_int_params, int number_float_params, int number_string_params, int number_bool_params)
+void DictionaryManager::print_dictionary()
+{
+  std::cout << "Dictionary contents:" << std::endl;
+  for (const auto & entry : dictionary_map_) {
+    const DictionaryNode & node = entry.second;
+    std::cout << "Node Name: " << node.name << ", ID: " << node.id << ", Supported: " << node.supported << std::endl;
+    for (size_t i = 0; i < node.port_types.size(); ++i) {
+      const auto & port_type = node.port_types[i];
+      std::cout << "  Port Name: " << port_type.name << ", Type: " << port_type.type <<" ID: "<< i <<std::endl;
+    }
+  }
+}
+
+DictionaryNode::DictionaryNode(bool supported, uint32_t id, std::string name, std::vector<NodePortType> port_types)
 {
   this->supported = supported;
   this->id = id;
   this->name = name;
-  this->number_int_params = number_int_params;
-  this->number_float_params = number_float_params;
-  this->number_string_params = number_string_params;
-  this->number_bool_params = number_bool_params;
+  this->port_types = port_types;
 }

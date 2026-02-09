@@ -7,7 +7,9 @@ BehaviorTreeEncoder::BehaviorTreeEncoder()
     : rclcpp::Node("behavior_tree_encoder")
 {
   // Initialize the dictionary manager
-  this->dictionary_manager_ = DictionaryManager();
+  this->dictionary_manager_ = std::make_unique<DictionaryManager>();
+
+  this->dictionary_manager_->print_dictionary();
 }
 
 std::vector<uint8_t> BehaviorTreeEncoder::encode(const std::string& behavior_tree_yaml)
