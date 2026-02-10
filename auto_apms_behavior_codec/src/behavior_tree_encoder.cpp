@@ -30,7 +30,7 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml){
       RCLCPP_ERROR(this->get_logger(), "Failed to parse XML: %s", xml_doc.ErrorStr());
       return false;
     }
-
+    bool contains_unsuported_nodes = false;
     // Find all BehaviorTree elements
     tinyxml2::XMLElement * root = xml_doc.RootElement();
     if (!root) {
@@ -38,7 +38,7 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml){
       return false;
     }
       //function to work on nodes recursively and print their name and attributes (parameters) -> will in the future add the node to the tree representation
-      std::function<void(const tinyxml2::XMLElement *, int)> print_xml_node;
+      std::function<bool(const tinyxml2::XMLElement *, int)> print_xml_node;
       print_xml_node = [&](const tinyxml2::XMLElement * ele, int depth) {
         for (int i = 0; i < depth; ++i) std::cout << "  ";
         // Print element name and all attributes (parameters)
@@ -57,10 +57,12 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml){
         std::cout << std::endl;
 
         // Recurse through all child elements (siblings too)
+        bool found_unsupported_node = false;
         for (const tinyxml2::XMLElement * child = ele->FirstChildElement(); child != nullptr;
              child = child->NextSiblingElement()) {
-          print_xml_node(child, depth + 1);
+          found_unsupported_node |= print_xml_node(child, depth + 1);
         }
+        return found_unsupported_node || !dictionary_node_entry.supported;
       };
 
     // Iterate through all BehaviorTree elements
@@ -72,11 +74,11 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml){
       // Print all child nodes of this tree
       for (const tinyxml2::XMLElement * child = tree_ele->FirstChildElement(); child != nullptr;
            child = child->NextSiblingElement()) {
-        print_xml_node(child, 1);
+        contains_unsuported_nodes |= print_xml_node(child, 1);
       }
     }
 
-    return true;
+    return !contains_unsuported_nodes;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Failed to read tree definition: %s", e.what());
     return false;
