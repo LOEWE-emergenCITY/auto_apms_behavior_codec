@@ -1,5 +1,5 @@
 #include "dictionary_manager.hpp"
-
+#include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 #include "auto_apms_behavior_tree_core/node/node_manifest.hpp"
 #include <set>
 #include <iostream>
@@ -10,15 +10,58 @@ using namespace auto_apms_behavior_codec;
 
 bool DictionaryManager::build_dictionary()
 {
-  // begin by getting all known node types from the core
-  std::set<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> known_node_manifests = auto_apms_behavior_tree::core::getNodeManifestResourceIdentities();
-
-  // for debugging, print the number of known node types -> currently only 0 -> why?
-  std::cout << "Building dictionary from " << known_node_manifests.size() << " known node manifests." << std::endl;
 
   // iterate through all node ids and get their models
   uint32_t id_counter = 0;
   uint16_t unsupported_nodes = 0;
+
+  // getting native nodes seems to be required seperately, do this first
+  auto_apms_behavior_tree::core::TreeDocument doc;
+  auto_apms_behavior_tree::NodeModelMap nodeModels = doc.getNodeModel(true);
+  RCLCPP_INFO(rclcpp::get_logger("DictionaryManager"), "Found %zu native nodes.", nodeModels.size());
+
+  //iterrate trough native nodes and add them to dictionary
+  std::map<std::string , auto_apms_behavior_tree::NodeModel>::iterator nodes_iterator;
+  for(nodes_iterator = nodeModels.begin(); nodes_iterator != nodeModels.end(); nodes_iterator++){
+    bool has_unsupported_parameter = false;
+    auto_apms_behavior_tree::NodeModel model = nodes_iterator->second;
+    std::vector<auto_apms_behavior_tree::NodePortInfo> port_infos = model.port_infos;
+    std::vector<NodePortType> port_types;
+    
+    //iterate through ports, check if they are supported and add them to the node dictionary entry
+    for (const auto & port_info : port_infos) {
+      if(supported_parameter_types_.find(port_info.port_type) == supported_parameter_types_.end()) {
+        RCLCPP_WARN(rclcpp::get_logger("DictionaryManager"), "Node %s has unsupported parameter type %s for port %s. This node will not be supported for encoding/decoding.", nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
+        has_unsupported_parameter = true;
+        unsupported_nodes++;
+        break;
+      }
+      else {
+        NodePortType node_port_type;
+        node_port_type.name = port_info.port_name;
+        node_port_type.type = port_info.port_type;
+        RCLCPP_DEBUG(rclcpp::get_logger("DictionaryManager"), "Node %s has supported parameter type %s for port %s.", nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
+        port_types.push_back(node_port_type);
+      }
+      // for debugging, print port info
+      //std::cout << "  Port Name: " << port_info.port_name << ", Type: " << port_info.port_type << ", Default: " << port_info.port_default << ", Has Default: " << port_info.port_has_default << ", Description: " << port_info.port_description << ", Direction: " << static_cast<int>(port_info.port_direction) << std::endl;
+    }
+    //std::cout << "Node Type: " << model.type<< std::endl;
+    DictionaryNode info(!has_unsupported_parameter, id_counter++, nodes_iterator->first, port_types);
+    //std::cout << "Added node to dictionary: " << info.name << " with ID " << info.id << " and " << info.number_int_params << " int params, " << info.number_float_params << " float params, " << info.number_string_params << " string params, " << info.number_bool_params << " bool params" << std::endl;
+    dictionary_map_.insert({info.name, info});
+  }
+
+
+
+  //now handle non native nodes
+
+  // begin by getting all known node types from the core
+  std::set<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> known_node_manifests = auto_apms_behavior_tree::core::getNodeManifestResourceIdentities();
+
+  std::cout << "Building dictionary from " << known_node_manifests.size() << " known node manifests." << std::endl;
+
+
   for (const auto & node_id : known_node_manifests) {
 
     try {
@@ -77,6 +120,17 @@ DictionaryManager::DictionaryManager()
   build_dictionary();
 }
 
+DictionaryNode DictionaryManager::get_dictionary_info_by_name(const std::string& dictionary_name)
+{
+  auto it = dictionary_map_.find(dictionary_name);
+  if (it != dictionary_map_.end()) {
+    return it->second;
+  } else {
+    RCLCPP_WARN(rclcpp::get_logger("DictionaryManager"), "Node name %s not found in dictionary.", dictionary_name.c_str());
+    return DictionaryNode(false, 0, dictionary_name); // return unsupported node with id 0
+  }
+}
+
 void DictionaryManager::print_dictionary()
 {
   std::cout << "Dictionary contents:" << std::endl;
@@ -97,3 +151,4 @@ DictionaryNode::DictionaryNode(bool supported, uint32_t id, std::string name, st
   this->name = name;
   this->port_types = port_types;
 }
+
