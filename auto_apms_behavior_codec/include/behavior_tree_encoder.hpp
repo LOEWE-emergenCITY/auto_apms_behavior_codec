@@ -19,6 +19,8 @@ namespace auto_apms_behavior_codec
 
       bool readTreeDefinition(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out);
 
+      bool readTreeDefinitionFromDocument(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out);
+
   private:
       std::unique_ptr<DictionaryManager> dictionary_manager_;
 
