@@ -44,9 +44,9 @@ struct PortBool : public Port {
 };
 
 struct PortAnyTypeAllowed : public Port {
-  explicit PortAnyTypeAllowed(const BT::AnyTypeAllowed& v, int16_t id) : value(v), id(id) {}
+  explicit PortAnyTypeAllowed(const std::vector<uint8_t>& v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
-  BT::AnyTypeAllowed value;
+  std::vector<uint8_t> value;  // Binary blob data
   private:
   int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
 };
@@ -63,6 +63,20 @@ struct Node {
     std::cout << "  Ports:" << std::endl;
     for (const auto& port : ports) {
       std::cout << "    Port ID: " << port->getID() << std::endl;
+      std::cout << "    Port Value: ";
+      if (auto port_int = std::dynamic_pointer_cast<PortInt>(port)) {
+        std::cout << port_int->value << " (int)" << std::endl;
+      } else if (auto port_float = std::dynamic_pointer_cast<PortFloat>(port)) {
+        std::cout << port_float->value << " (float)" << std::endl;
+      } else if (auto port_bool = std::dynamic_pointer_cast<PortBool>(port  )) {
+        std::cout << (port_bool->value ? "true" : "false") << " (bool)" << std::endl;
+      } else if (auto port_string = std::dynamic_pointer_cast<PortString>(port)) {
+        std::cout << port_string->value << " (string)" << std::endl;
+      } else if (auto port_any = std::dynamic_pointer_cast<PortAnyTypeAllowed>(port)) {
+        std::cout << "AnyTypeAllowed value (type information not available in this representation)" << std::endl;
+      } else {
+        std::cout << "Unknown port type" << std::endl;
+      }
     }
     if(!children.empty()){
       std::cout << "  Children:" << std::endl;
