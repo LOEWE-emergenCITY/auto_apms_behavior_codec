@@ -56,17 +56,22 @@ struct PortAnyTypeAllowed : public Port {
 struct Node {
   std::string registration_name;
   std::string instance_name;
-  std::vector<std::shared_ptr<Port>> ports;
-  std::vector<Node> children;
+  std::vector<std::shared_ptr<Port>> ports; //ports of the node, same order as in xml
+  std::vector<Node> children; //children of the node, same order as in xml
 };
 
 struct Tree {
-  std::vector<Node> nodes;
-
+  Node root; // root node of the tree
+  std::string name;
   std::vector<uint8_t> serialize() const {
     // Minimal placeholder serialization: empty for now
     return {};
   }
+};
+
+struct Document {
+  std::vector<Tree> trees; //trees contained in the document, same order as in xml
+  std::string main_tree_to_execute; //is this required?
 };
 
 } // namespace behavior_tree_representation

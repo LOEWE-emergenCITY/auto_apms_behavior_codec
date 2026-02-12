@@ -17,7 +17,7 @@ namespace auto_apms_behavior_codec
       ~BehaviorTreeEncoder() = default;
       std::vector<uint8_t> encode(const std::string& behavior_tree_yaml);
 
-      bool readTreeDefinition(std::string tree_xml);
+      bool readTreeDefinition(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out);
 
   private:
       std::unique_ptr<DictionaryManager> dictionary_manager_;
