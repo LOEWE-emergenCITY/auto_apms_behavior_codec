@@ -1,7 +1,7 @@
-#include "behavior_tree_encoder.hpp"
+#include "auto_apms_behavior_codec/behavior_tree_encoder.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
-#include "dictionary_manager.hpp"
+#include "auto_apms_behavior_codec/dictionary_manager.hpp"
 #include <fstream>
 #include <sstream>
 
