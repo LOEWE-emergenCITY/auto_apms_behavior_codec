@@ -2,10 +2,10 @@
 
 #include <vector>
 #include <string>
-#include "dictionary_manager.hpp"
+#include "auto_apms_behavior_codec/dictionary_manager.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
-#include "behavior_tree_representation.hpp"
+#include "auto_apms_behavior_codec/behavior_tree_representation.hpp"
 
 namespace auto_apms_behavior_codec
 {

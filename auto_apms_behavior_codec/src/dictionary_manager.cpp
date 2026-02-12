@@ -1,4 +1,4 @@
-#include "dictionary_manager.hpp"
+#include "auto_apms_behavior_codec/dictionary_manager.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 #include "auto_apms_behavior_tree_core/node/node_manifest.hpp"
 #include <set>
