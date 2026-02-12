@@ -153,6 +153,8 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, s
       return false;
     }
     
+    //TODO: subtree needs special handeling, as it has a dynamic number of ports, and a name not included in the NodeModelMap
+
     RCLCPP_DEBUG(this->get_logger(), "Parsing XML of length %zu", tree_xml.length());
     
     // Use the auto_apms TreeDocument API to parse the XML
