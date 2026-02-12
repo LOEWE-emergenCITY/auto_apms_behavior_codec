@@ -10,20 +10,41 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(auto_apms_behavior_tree_core REQUIRED)
 
+
+
 # Add dictionary manager source files
 add_library(dictionary_manager
   src/dictionary_manager.cpp
 )
 
-# Add include directory
+# Add include directory (set after the target is created)
 target_include_directories(dictionary_manager PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-# Link dictionary manager with auto_apms_behavior_tree_core
+#add behavior tree representation source files
+add_library(behavior_tree_representation
+  src/behavior_tree_representation.cpp
+)
+
+# Add include directory for behavior_tree_representation target
+target_include_directories(behavior_tree_representation PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+# add tinycbor source files
+add_subdirectory(third_party/tinycbor)
+
+
+# Link dictionary manager
 target_link_libraries(dictionary_manager PUBLIC 
-  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
+  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core tinycbor
+)
+
+target_link_libraries(behavior_tree_representation PUBLIC 
+  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core tinycbor
 )
 
 # Add behavior tree encoder executable

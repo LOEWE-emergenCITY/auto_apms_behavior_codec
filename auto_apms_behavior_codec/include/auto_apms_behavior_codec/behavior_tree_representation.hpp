@@ -3,6 +3,10 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iostream>
+
+#include "cbor.h"
+
 
 namespace behavior_tree_representation {
 
@@ -98,6 +102,12 @@ struct Tree {
     std::cout << "  Tree: " << name << std::endl;
     root.print();
   }
+
+  void serialize(CborEncoder* encoder) {
+    //todo
+    return;
+  }
+
 };
 
 struct Document {
@@ -109,6 +119,9 @@ struct Document {
       tree.print();
     }
   }
+
+  //serializes the document using CBOR
+  std::vector<uint8_t> serialize();
 };
 
 } // namespace behavior_tree_representation
