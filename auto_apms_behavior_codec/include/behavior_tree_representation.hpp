@@ -58,6 +58,19 @@ struct Node {
   std::string instance_name;
   std::vector<std::shared_ptr<Port>> ports; //ports of the node, same order as in xml
   std::vector<Node> children; //children of the node, same order as in xml
+  void print() const {
+    std::cout << "  Node: " << instance_name << " (Registration Name: " << registration_name << ")" << std::endl;
+    std::cout << "  Ports:" << std::endl;
+    for (const auto& port : ports) {
+      std::cout << "    Port ID: " << port->getID() << std::endl;
+    }
+    if(!children.empty()){
+      std::cout << "  Children:" << std::endl;
+      for (const auto& child : children) {
+        child.print();
+      }
+    }
+  }
 };
 
 struct Tree {
@@ -67,11 +80,21 @@ struct Tree {
     // Minimal placeholder serialization: empty for now
     return {};
   }
+  void print() const {
+    std::cout << "  Tree: " << name << std::endl;
+    root.print();
+  }
 };
 
 struct Document {
   std::vector<Tree> trees; //trees contained in the document, same order as in xml
   std::string main_tree_to_execute; //is this required?
+  void print() const {
+    std::cout << "Document with " << trees.size() << " trees. Main tree to execute: " << main_tree_to_execute << std::endl;
+    for (const auto& tree : trees) {
+      tree.print();
+    }
+  }
 };
 
 } // namespace behavior_tree_representation
