@@ -26,6 +26,7 @@ target_include_directories(dictionary_manager PUBLIC
 #add behavior tree representation source files
 add_library(behavior_tree_representation
   src/behavior_tree_representation.cpp
+  src/cbor_serialization.cpp
 )
 
 # Add include directory for behavior_tree_representation target
