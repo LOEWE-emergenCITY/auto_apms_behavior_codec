@@ -40,7 +40,7 @@ add_subdirectory(third_party/tinycbor)
 
 # Link dictionary manager
 target_link_libraries(dictionary_manager PUBLIC 
-  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core tinycbor
+  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core tinycbor behavior_tree_representation
 )
 
 target_link_libraries(behavior_tree_representation PUBLIC 
@@ -60,6 +60,7 @@ target_link_libraries(behavior_tree_encoder_node PRIVATE
   dictionary_manager
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
+  behavior_tree_representation
 )
 
 # Install the executable

@@ -96,11 +96,7 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml, std::unique_p
             int16_t port_id = static_cast<int16_t>(node.ports.size());
             port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, port_id);
           } else if (port_info.type == "BT::AnyTypeAllowed") {
-            // Treat AnyTypeAllowed as a binary blob
-            // For now, we'll store the string value as binary data
-            int16_t port_id = static_cast<int16_t>(node.ports.size());
-            std::vector<uint8_t> binary_data(port_value, port_value + std::strlen(port_value));
-            port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(binary_data, port_id);
+            //TODO handle AnyType allowed
           } else {
             RCLCPP_WARN(this->get_logger(), "Unsupported port type '%s' for port '%s' in node '%s'", port_info.type.c_str(), port_info.name.c_str(), ele->Name());
           }
@@ -114,7 +110,7 @@ bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml, std::unique_p
       // Recursively process all child nodes
       for (const tinyxml2::XMLElement * child = ele->FirstChildElement(); child != nullptr;
            child = child->NextSiblingElement()) {
-        node.children.push_back(process_node(child));
+        node.children.push_back(std::make_shared<behavior_tree_representation::Node>(process_node(child)));
       }
 
       return node;
@@ -211,7 +207,7 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, s
           try {
             // Get the first child
             auto first_child = node.getFirstNode();
-            current_node.children.push_back(process_node(first_child));
+            current_node.children.push_back(std::make_shared<behavior_tree_representation::Node>(process_node(first_child)));
           } catch (const std::exception &) {
             // No children found, which is fine
           }
@@ -224,7 +220,7 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, s
       if (tree_element.hasChildren()) {
         try {
           auto first_child = tree_element.getFirstNode();
-          root_node.children.push_back(process_node(first_child));
+          root_node.children.push_back(std::make_shared<behavior_tree_representation::Node>(process_node(first_child)));
         } catch (const std::exception &) {
           // Tree has no children, which is fine
         }
@@ -285,14 +281,7 @@ std::string BehaviorTreeEncoder::reconstructXML(const behavior_tree_representati
         } else if (auto port_string = std::dynamic_pointer_cast<behavior_tree_representation::PortString>(port)) {
           port_value = port_string->value;
         } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
-          // Encode binary blob as hex string
-          std::stringstream ss;
-          ss << std::hex;
-          for (uint8_t byte : port_any->value) {
-            ss << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
-          }
-          port_value = "0x" + ss.str();
-          RCLCPP_DEBUG(this->get_logger(), "Encoded AnyTypeAllowed port as hex: %s", port_value.c_str());
+          //TODO handle AnyTypeAllowed
         }
         
         // Find port name from dictionary
@@ -305,7 +294,7 @@ std::string BehaviorTreeEncoder::reconstructXML(const behavior_tree_representati
       
       // Recursively add child nodes
       for (const auto& child : node.children) {
-        tinyxml2::XMLElement* child_element = reconstruct_node(child);
+        tinyxml2::XMLElement* child_element = reconstruct_node(*child);
         node_element->InsertEndChild(child_element);
       }
       
@@ -339,6 +328,10 @@ std::string BehaviorTreeEncoder::reconstructXML(const behavior_tree_representati
   }
 }
 
+std::vector<uint8_t> BehaviorTreeEncoder::encode(behavior_tree_representation::Document& document) {
+  return document.serialize(dictionary_manager_);
+}
+
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
@@ -357,7 +350,13 @@ int main(int argc, char * argv[])
     
     if (ok && document) {
       document->print();
-      
+      std::vector<uint8_t> encoded_data = node->encode(*document);
+
+      std::cout << "Encoded data (hex): ";
+      for (uint8_t byte : encoded_data) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+      }
+      std::cout << std::dec << std::endl; // Reset to decimal
       // Test XML reconstruction
       std::string reconstructed_xml = node->reconstructXML(*document);
       RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());

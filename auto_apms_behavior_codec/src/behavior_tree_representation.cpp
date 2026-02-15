@@ -3,27 +3,27 @@
 
 using namespace behavior_tree_representation;
 
-std::vector<uint8_t> Document::serialize() {
+std::vector<uint8_t> Document::serialize(std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) {
   CborEncoder* encoder = new CborEncoder();
-  uint8_t* buf = new uint8_t[1024];  // allocate a large enough buffer
+  uint8_t buf[1024];  // allocate a large enough buffer
   cbor_encoder_init(encoder, buf, sizeof(buf), 0);
 
   CborEncoder* arrayEncoder = new CborEncoder();
-  uint8_t* arrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the array
+  uint8_t arrayBuf[1024];  // allocate a large enough buffer for the array
   cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
   CborEncoder* arrayEncoder2 = new CborEncoder();
-  uint8_t* arrayBuf2 = new uint8_t[1024];  // allocate a large enough buffer for the second array
+  uint8_t arrayBuf2[1024];  // allocate a large enough buffer for the second array
   cbor_encoder_init(arrayEncoder2, arrayBuf2, sizeof(arrayBuf2), 0);
 
   //create array containing the documents basic information: main tree to execute and a array of trees
   cbor_encoder_create_array(encoder, arrayEncoder, 2);
-  cbor_encode_text_stringz(arrayEncoder, main_tree_to_execute.c_str());
+  cbor_encode_text_string(arrayEncoder, main_tree_to_execute.c_str(),main_tree_to_execute.size());
   cbor_encoder_create_array(arrayEncoder, arrayEncoder2, trees.size());
   for(Tree tree : trees){
 
     //the trees serialize function encodes the tree onto a given encoder
-    tree.serialize(arrayEncoder2);
+    tree.serialize(arrayEncoder2, dictionary_manager);
   }
   // close the trees array
   cbor_encoder_close_container_checked(arrayEncoder, arrayEncoder2);
@@ -32,14 +32,103 @@ std::vector<uint8_t> Document::serialize() {
   cbor_encoder_close_container_checked(encoder, arrayEncoder);
 
   size_t cborSize = cbor_encoder_get_buffer_size(encoder, buf);
-
+  std::cout << "CBOR encoded data size: " << cborSize << " bytes" << std::endl;
   std::vector<uint8_t> result(buf, buf + cborSize);
-  delete[] buf;
   delete encoder;
-  delete[] arrayBuf;
   delete arrayEncoder;
-  delete[] arrayBuf2;
   delete arrayEncoder2;
 
   return result;
+}
+
+bool Node::serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) {
+  CborEncoder* arrayEncoder = new CborEncoder();
+  uint8_t* arrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the array
+  cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
+
+  //create array containing the nodes basic information: type code, an array of ports and an array of children
+  cbor_encoder_create_array(encoder, arrayEncoder, 4);
+  cbor_encode_uint(arrayEncoder, dictionary_manager->get_dictionary_info_by_name(registration_name).id);
+
+  CborEncoder* portsArrayEncoder = new CborEncoder();
+  uint8_t* portsArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the ports array
+  cbor_encoder_init(portsArrayEncoder, portsArrayBuf, sizeof(portsArrayBuf), 0);
+  cbor_encoder_create_array(arrayEncoder, portsArrayEncoder, ports.size());
+  for(std::shared_ptr<Port> port : ports){
+    port->serialize(portsArrayEncoder);
+  }
+  // close the ports array
+  cbor_encoder_close_container_checked(arrayEncoder, portsArrayEncoder);
+
+  CborEncoder* childrenArrayEncoder = new CborEncoder();
+  uint8_t* childrenArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the children array
+  cbor_encoder_init(childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
+  cbor_encoder_create_array(arrayEncoder, childrenArrayEncoder, children.size());
+  for(std::shared_ptr<Node> child : children){
+    child->serialize(childrenArrayEncoder, dictionary_manager);
+  }
+  // close the children array
+  cbor_encoder_close_container_checked(arrayEncoder, childrenArrayEncoder);
+  // close the main array
+  cbor_encoder_close_container_checked(encoder, arrayEncoder);
+
+  delete[] arrayBuf;
+  delete arrayEncoder;
+  delete[] portsArrayBuf;
+  delete portsArrayEncoder;
+  delete[] childrenArrayBuf;
+  delete childrenArrayEncoder;
+
+  return true;
+}
+
+
+bool Tree::serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) {
+  CborEncoder* arrayEncoder = new CborEncoder();
+  uint8_t* arrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the array
+  cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
+
+  //create array containing the trees basic information: name and the root node
+  cbor_encoder_create_array(encoder, arrayEncoder, 2);
+  cbor_encode_text_string(arrayEncoder, name.c_str(),name.size());
+  root.serialize(arrayEncoder, dictionary_manager);
+  // close the main array
+  cbor_encoder_close_container_checked(encoder, arrayEncoder);
+
+  delete[] arrayBuf;
+  delete arrayEncoder;
+
+  return true;
+}
+
+bool PortInt::serialize(CborEncoder* encoder){
+  cbor_encode_uint(encoder, this->getID());
+  cbor_encode_int(encoder, this->value);
+  return true;
+}
+
+bool PortFloat::serialize(CborEncoder* encoder){
+  cbor_encode_uint(encoder, this->getID());
+  cbor_encode_float(encoder, this->value);
+  return true;
+}
+
+bool PortBool::serialize(CborEncoder* encoder){
+  cbor_encode_uint(encoder, this->getID());
+  cbor_encode_boolean(encoder, this->value);
+  return true;
+}
+
+bool PortString::serialize(CborEncoder* encoder){
+  cbor_encode_uint(encoder, this->getID());
+  cbor_encode_text_string(encoder, this->value.c_str(), this->value.size());
+  return true;
+}
+
+bool PortAnyTypeAllowed::serialize(CborEncoder* encoder){
+  cbor_encode_uint(encoder, this->getID());
+  //for the value of an AnyTypeAllowed port, we need to encode both the type information and the actual value, the type is included as string, the data as a binary blob
+  //cbor_encode_text_string(encoder, this->value.first.c_str(), this->value.first.size());
+  //cbor_encode_byte_string(encoder, this->value.second.data(), this->value.second.size());
+  return true;
 }
