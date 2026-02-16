@@ -33,8 +33,14 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
   // special handling for subtree:
   if(dict_entry.name == "SubTree"){
     uint32_t number_of_ports = node_element.getPortNames().size();
-    std::cout << "Sub tree has %u ports" << number_of_ports << std::endl;
-    //TODO
+    std::cout << "Sub tree has " << number_of_ports << " ports" << std::endl;
+
+    std::map<std::string, std::string> port_values = node_element.getPorts();
+
+    for(auto port : port_values){
+      std::cout << "Port: " << port.first << " = " << port.second << std::endl;
+      //apparently the ports are not automatically parsed
+    }
   }
   else{
     // Handle ports regularly based on the dictionary entry
@@ -46,7 +52,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
 
       if(port_values.find(port_info.name) != port_values.end()){
         std::string port_value = port_values.at(port_info.name);
-        std::cout << "Node: " << result.instance_name << ", Port: " << port_info.name << " = " << port_value << std::endl;
+        std::cout << "Node: " << result.instance_name << ", Port: " << port_info.name << " = " << port_value << "type: "<< port_info.type<< std::endl;
         std::shared_ptr<behavior_tree_representation::Port> port_ptr;
         if(port_info.type == "int"){
           port_ptr = std::make_shared<behavior_tree_representation::PortInt>(std::stoi(port_value), result.ports.size()); //result.ports.size() results in the index of the port in the dictionary entry, this corresponds to the ports id, //TODO: figure out if this can be omitted
@@ -54,15 +60,14 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
         else if(port_info.type == "float"){
           port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(std::stof(port_value), result.ports.size());
         }
-        else if(port_info.type == "string"){
+        //handle AnyTypeALlowed as string, this might work
+        else if(port_info.type == "std::string" || port_info.type == "BT::AnyTypeAllowed"){
           port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, result.ports.size());
         }
         else if(port_info.type == "bool"){
           port_ptr = std::make_shared<behavior_tree_representation::PortBool>(port_value == "true", result.ports.size());
         }
-        else if(port_info.type == "BT::AnyTypeAllowed"){
-          //TODO
-        }
+
         if(port_ptr){
           result.ports.push_back(port_ptr);
         }
@@ -83,28 +88,10 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
 }
 
 
-//attempt at using the TreeDocument API to read the tree definition, somehow not all information seems to be easylie retrivable from the tree document, especially regarding ports of nodes
-bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out){
+//attempt at using the TreeDocument API to read the tree definition, somehow not all information seems to be easilie retrivable from the tree document, especially regarding ports of nodes
+bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree::core::TreeDocument& tree_doc, std::unique_ptr<behavior_tree_representation::Document>& document_out){
   try {
-    // Validate that we have XML content
-    if (tree_xml.empty()) {
-      RCLCPP_ERROR(this->get_logger(), "XML string is empty");
-      return false;
-    }
     
-    //TODO: subtree needs special handeling, as it has a dynamic number of ports, and a name not included in the NodeModelMap
-
-    RCLCPP_DEBUG(this->get_logger(), "Parsing XML of length %zu", tree_xml.length());
-    
-    // Use the auto_apms TreeDocument API to parse the XML
-    auto_apms_behavior_tree::core::TreeDocument tree_doc;
-    
-    // Merge the XML string into the tree document
-    try {
-      tree_doc.mergeString(tree_xml, true);
-    } catch (const std::exception & parse_error) {
-      return false;
-    }
     std::cout << "read document: "<< std::endl << tree_doc.writeToString() << std::endl;
     document_out = std::make_unique<behavior_tree_representation::Document>();
     
@@ -250,11 +237,14 @@ int main(int argc, char * argv[])
     const std::string xml = ss.str();
     
     std::unique_ptr<behavior_tree_representation::Document> document;
-    bool ok = node->readTreeDefinitionFromDocument(xml, document);
+
+    //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
+    bool ok = node->readTreeDefinitionFromXML(xml, document);
+
     RCLCPP_INFO(node->get_logger(), "readTreeDefinitionFromDocument returned: %s", ok ? "true" : "false");
     
     if (ok && document) {
-      document->print();
+      //document->print();
       std::vector<uint8_t> encoded_data = node->encode(*document);
 
       std::cout << "Encoded data (hex): ";
@@ -263,13 +253,9 @@ int main(int argc, char * argv[])
       }
       std::cout << std::dec << std::endl; // Reset to decimal
       // Test XML reconstruction
-      std::string reconstructed_xml = node->reconstructXML(*document);
-      RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
+      //std::string reconstructed_xml = node->reconstructXML(*document);
+      //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
     }
-    
-    std::unique_ptr<behavior_tree_representation::Document> document2;
-    //bool ok2 = node->readTreeDefinitionFromDocument(xml, document2);
-    //RCLCPP_INFO(node->get_logger(), "readTreeDefinitionFromDocument returned: %s", ok2 ? "true" : "false");
   } else {
     RCLCPP_WARN(node->get_logger(), "Could not open example XML: %s", xml_path.c_str());
   }

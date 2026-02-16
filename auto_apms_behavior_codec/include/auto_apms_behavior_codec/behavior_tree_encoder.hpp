@@ -20,9 +20,31 @@ namespace auto_apms_behavior_codec
 
       std::vector<uint8_t> encode(behavior_tree_representation::Document& document);
 
-      bool readTreeDefinition(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out);
+      // reads a tree definition from a TreeDocument and converts it to the internal representation
+      bool readTreeDefinitionFromDocument(auto_apms_behavior_tree::core::TreeDocument& tree_doc, std::unique_ptr<behavior_tree_representation::Document>& document_out);
 
-      bool readTreeDefinitionFromDocument(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out);
+      // TODO: parameter for node manifest to use
+      bool readTreeDefinitionFromXML(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out){
+        // Validate that we have XML content
+        if (tree_xml.empty()) {
+            RCLCPP_ERROR(this->get_logger(), "XML string is empty");
+          return false;
+        }
+        RCLCPP_DEBUG(this->get_logger(), "Parsing XML of length %zu", tree_xml.length());
+    
+        auto_apms_behavior_tree::core::TreeDocument tree_doc;
+          // Merge the XML string into the tree document
+          try {
+            tree_doc.mergeString(tree_xml, true);
+          } catch (const std::exception & parse_error) {
+            return false;
+          }
+          
+          // this still needs correct implementation
+          tree_doc.registerNodes(this->dictionary_manager_->getNodeManifests().front());
+
+          return readTreeDefinitionFromDocument(tree_doc, document_out);
+        }
 
       std::string reconstructXML(const behavior_tree_representation::Document& document);
 

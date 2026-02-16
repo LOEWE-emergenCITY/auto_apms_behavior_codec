@@ -44,12 +44,20 @@ namespace auto_apms_behavior_codec
       DictionaryNode get_dictionary_info_by_name(const std::string& dictionary_name);
 
       void print_dictionary();
-  private:
-    // gets known node types and builds dictionary
-    bool build_dictionary();
 
-    //store dictionary entries
-    std::map<std::string, DictionaryNode> dictionary_map_;
+      std::vector<auto_apms_behavior_tree::core::NodeManifest> getNodeManifests();
+
+      auto_apms_behavior_tree::core::NodeManifest getNodeManifest();
+
+    private:
+      // gets known node types and builds dictionary
+      bool build_dictionary();
+
+      //store dictionary entries
+      std::map<std::string, DictionaryNode> dictionary_map_;
+
+      //stores the node manifests used to build the dictionary
+      std::vector<auto_apms_behavior_tree::core::NodeManifest> manifests;
   };
 
 }  // namespace auto_apms_behavior_codec

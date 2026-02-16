@@ -67,6 +67,8 @@ bool DictionaryManager::build_dictionary()
     try {
       //get node manifest resource for id
       auto_apms_behavior_tree::core::NodeManifestResource manifest_resource = auto_apms_behavior_tree::core::NodeManifestResource(node_id);
+
+      this->manifests.push_back(auto_apms_behavior_tree::core::NodeManifest::fromResource(node_id));
       
       // get node models from manifest
       auto node_models = manifest_resource.getNodeModel();
@@ -152,3 +154,17 @@ DictionaryNode::DictionaryNode(bool supported, uint32_t id, std::string name, st
   this->port_types = port_types;
 }
 
+
+std::vector<auto_apms_behavior_tree::core::NodeManifest> DictionaryManager::getNodeManifests()
+{
+  return this->manifests;
+}
+
+auto_apms_behavior_tree::core::NodeManifest DictionaryManager::getNodeManifest()
+{
+  auto_apms_behavior_tree::core::NodeManifest result;
+  for (const auto & entry : this->manifests) {
+    result.merge(entry, true);
+  }
+  return result;
+}
