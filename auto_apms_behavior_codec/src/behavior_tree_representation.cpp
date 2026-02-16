@@ -3,7 +3,7 @@
 using namespace behavior_tree_representation;
 
 void Node::print() const{
-  std::cout << "  Node: " << instance_name << " (Registration Name: " << registration_name << ")" << std::endl;
+  std::cout << "  Node: " << instance_name << " (Registration Name: " << type_name << ")" << std::endl;
   std::cout << "  Ports:" << std::endl;
   for (const auto& port : ports) {
     std::cout << "    Port ID: " << port->getID() << std::endl;

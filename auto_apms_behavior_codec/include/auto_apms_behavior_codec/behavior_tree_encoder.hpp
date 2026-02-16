@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include <memory>
 #include "auto_apms_behavior_codec/behavior_tree_representation.hpp"
+#include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 
 namespace auto_apms_behavior_codec
 {
@@ -29,6 +30,8 @@ namespace auto_apms_behavior_codec
       std::shared_ptr<DictionaryManager> dictionary_manager_;
 
       behavior_tree_representation::Tree tree;
+
+      behavior_tree_representation::Node getNodeFromElement(const auto_apms_behavior_tree::core::TreeDocument::NodeElement& node_element);
   };
 
 } 

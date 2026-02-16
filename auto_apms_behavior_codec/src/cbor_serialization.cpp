@@ -48,7 +48,7 @@ bool Node::serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_co
 
   //create array containing the nodes basic information: type code, an array of ports and an array of children
   cbor_encoder_create_array(encoder, &arrayEncoder, 3);
-  cbor_encode_uint(&arrayEncoder, dictionary_manager->get_dictionary_info_by_name(registration_name).id);
+  cbor_encode_uint(&arrayEncoder, dictionary_manager->get_dictionary_info_by_name(type_name).id);
 
   CborEncoder portsArrayEncoder;
   uint8_t portsArrayBuf[1024];  // allocate a large enough buffer for the ports array

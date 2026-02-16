@@ -78,7 +78,7 @@ struct PortAnyTypeAllowed : public Port {
 
 
 struct Node {
-  std::string registration_name;
+  std::string type_name;
   std::string instance_name;
   std::vector<std::shared_ptr<Port>> ports; //ports of the node, same order as in xml
   std::vector<std::shared_ptr<Node>> children; //children of the node, same order as in xml
