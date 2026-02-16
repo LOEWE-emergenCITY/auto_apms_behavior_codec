@@ -70,7 +70,15 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
     }
   }
 
-  // Recursively process children TODO
+  // Recursively process children
+  if(node_element.hasChildren()){
+    auto_apms_behavior_tree::core::TreeDocument::NodeElement::ChildIterator child_it = node_element.begin();
+    for(child_it; child_it != node_element.end(); ++child_it){
+      behavior_tree_representation::Node child_node = getNodeFromElement(*child_it);
+      result.children.push_back(std::make_shared<behavior_tree_representation::Node>(child_node));
+    }
+  }
+
   return result;
 }
 
