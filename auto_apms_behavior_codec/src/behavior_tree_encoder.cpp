@@ -124,6 +124,17 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree
     // Set the main tree to execute
     std::string root_tree_name = tree_doc.getRootTreeName();
     document_out->main_tree_to_execute = root_tree_name;
+
+    // reorder trees in document in order to ensure the main tree to execute comes first, this simplyfies encoding
+    if(!root_tree_name.empty()){
+      auto it = std::find_if(document_out->trees.begin(), document_out->trees.end(), [&](const behavior_tree_representation::Tree& tree){
+        return tree.name == root_tree_name;
+      });
+      if(it != document_out->trees.end()){
+        std::iter_swap(document_out->trees.begin(), it);
+      }
+    }
+
     document_out->print();
     
     RCLCPP_INFO(this->get_logger(), "Successfully parsed tree document with %zu trees using TreeDocument API", document_out->trees.size());

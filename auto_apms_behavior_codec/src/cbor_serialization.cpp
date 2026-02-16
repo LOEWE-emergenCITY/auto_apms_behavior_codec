@@ -12,23 +12,14 @@ std::vector<uint8_t> Document::serialize(std::shared_ptr<auto_apms_behavior_code
   uint8_t arrayBuf[1024];  // allocate a large enough buffer for the array
   cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
-  CborEncoder* arrayEncoder2 = new CborEncoder();
-  uint8_t arrayBuf2[1024];  // allocate a large enough buffer for the second array
-  cbor_encoder_init(arrayEncoder2, arrayBuf2, sizeof(arrayBuf2), 0);
-
-  //create array containing the documents basic information: main tree to execute and a array of trees
-  cbor_encoder_create_array(encoder, arrayEncoder, 2);
-  cbor_encode_text_string(arrayEncoder, main_tree_to_execute.c_str(),main_tree_to_execute.size());
-  cbor_encoder_create_array(arrayEncoder, arrayEncoder2, trees.size());
+  //create array of trees, the main tree to execute comes first
+  cbor_encoder_create_array(encoder, arrayEncoder, trees.size());
   for(Tree tree : trees){
 
     //the trees serialize function encodes the tree onto a given encoder
-    tree.serialize(arrayEncoder2, dictionary_manager);
+    tree.serialize(arrayEncoder, dictionary_manager);
   }
   // close the trees array
-  cbor_encoder_close_container_checked(arrayEncoder, arrayEncoder2);
-
-  // close the main array
   cbor_encoder_close_container_checked(encoder, arrayEncoder);
 
   size_t cborSize = cbor_encoder_get_buffer_size(encoder, buf);
@@ -36,7 +27,6 @@ std::vector<uint8_t> Document::serialize(std::shared_ptr<auto_apms_behavior_code
   std::vector<uint8_t> result(buf, buf + cborSize);
   delete encoder;
   delete arrayEncoder;
-  delete arrayEncoder2;
 
   return result;
 }

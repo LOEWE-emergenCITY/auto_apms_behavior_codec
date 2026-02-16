@@ -5,7 +5,7 @@ Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air missio
 ## Message Fromat
 The current approach for message encoding is the following:
 ### Document
-The document object is encoded as a CBOR array with two elements, first a string encoding the "main_tree_to_execute" and second a CBOR array containg the behavior trees. Potentital room for optimization is to skip the "main_tree_to_Execute" and just have it bee the first element of the tree array, in this case the document would just be an array of behavior trees.
+The document object is encoded as a CBOR array with an element per tree. The first conatined tree is the main tree to execute.
 
 ### Behavior Tree
 A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potetnial room for improvement could be using as short as possible tree names.
@@ -15,6 +15,13 @@ A node is encoded as a CBOR array with 3 elements, first the type code of the no
 
 ### Ports
 Each port consists of an array, the elements of which depend on the type of port. Currently all ports conaint the port id (just a mapping of the ports position in the node) this can be ommited if it is known that the ports are always ordered in a specific way.
+
+### Current State
+Currently the encoding is functional, exept for handling of SubTrees. The [example document](auto_apms_behavior_codec_examples/behavior/hello_world.xml) is encoded to: 
+`82 82 64 4d 61 69 6e 83 18 19 80 82 83 18 1e 80 80 83 18 1e 80 80 82 65 50 72 69 6e 74 83 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f 80`
+
+Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
+
 
 # Information about LoRa throughput
 The following is intended as a reference to judge possible lora throughput
