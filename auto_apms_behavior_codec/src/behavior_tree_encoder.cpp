@@ -74,123 +74,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
   return result;
 }
 
-/*
-bool BehaviorTreeEncoder::readTreeDefinition(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out){
-  try {
-    tinyxml2::XMLDocument xml_doc;
-    if (xml_doc.Parse(tree_xml.c_str()) != tinyxml2::XML_SUCCESS) {
-      RCLCPP_ERROR(this->get_logger(), "Failed to parse XML: %s", xml_doc.ErrorStr());
-      return false;
-    }
-    bool contains_unsuported_nodes = false;
 
-    document_out = std::make_unique<behavior_tree_representation::Document>();
-    // Find all BehaviorTree elements
-    tinyxml2::XMLElement * root = xml_doc.RootElement();
-    if (!root) {
-      RCLCPP_ERROR(this->get_logger(), "No root element found in XML");
-      return false;
-    }
-
-    // Get the main tree to execute from the root element
-    const char* main_tree = root->Attribute("main_tree_to_execute");
-    if (main_tree) {
-      document_out->main_tree_to_execute = main_tree;
-    }
-
-    // Function to recursively process nodes and populate the tree representation
-    std::function<behavior_tree_representation::Node(const tinyxml2::XMLElement *)> process_node;
-    process_node = [&](const tinyxml2::XMLElement * ele) -> behavior_tree_representation::Node {
-      behavior_tree_representation::Node node;
-      node.registration_name = ele->Name();
-      
-      // Get the instance name from the "name" attribute, or use registration name if not present
-      const char* instance_name = ele->Attribute("name");
-      node.instance_name = instance_name ? instance_name : ele->Name();
-
-      // Get dictionary info for this node type
-      DictionaryNode dictionary_node_entry = this->dictionary_manager_->get_dictionary_info_by_name(ele->Name());
-      
-      if (!dictionary_node_entry.supported) {
-        RCLCPP_WARN(this->get_logger(), "Node type '%s' is not supported for encoding/decoding", ele->Name());
-        contains_unsuported_nodes = true;
-      }
-
-      // Process all ports for this node
-      for (const auto & port_info : dictionary_node_entry.port_types) {
-        const char* port_value = ele->Attribute(port_info.name.c_str());
-        if (port_value) {
-          // Parse the port value based on its type and create appropriate Port object
-          std::shared_ptr<behavior_tree_representation::Port> port_ptr;
-          
-          if (port_info.type == "int32_t" || port_info.type == "int") {
-            try {
-              int32_t value = std::stoi(port_value);
-              int16_t port_id = static_cast<int16_t>(node.ports.size());
-              port_ptr = std::make_shared<behavior_tree_representation::PortInt>(value, port_id);
-            } catch (const std::exception& e) {
-              RCLCPP_WARN(this->get_logger(), "Failed to parse int port '%s': %s", port_info.name.c_str(), e.what());
-            }
-          } else if (port_info.type == "float") {
-            try {
-              float value = std::stof(port_value);
-              int16_t port_id = static_cast<int16_t>(node.ports.size());
-              port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(value, port_id);
-            } catch (const std::exception& e) {
-              RCLCPP_WARN(this->get_logger(), "Failed to parse float port '%s': %s", port_info.name.c_str(), e.what());
-            }
-          } else if (port_info.type == "bool") {
-            bool value = (std::string(port_value) == "true" || std::string(port_value) == "1");
-            int16_t port_id = static_cast<int16_t>(node.ports.size());
-            port_ptr = std::make_shared<behavior_tree_representation::PortBool>(value, port_id);
-          } else if (port_info.type == "std::string") {
-            int16_t port_id = static_cast<int16_t>(node.ports.size());
-            port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, port_id);
-          } else if (port_info.type == "BT::AnyTypeAllowed") {
-            //TODO handle AnyType allowed
-          } else {
-            RCLCPP_WARN(this->get_logger(), "Unsupported port type '%s' for port '%s' in node '%s'", port_info.type.c_str(), port_info.name.c_str(), ele->Name());
-          }
-          
-          if (port_ptr) {
-            node.ports.push_back(port_ptr);
-          }
-        }
-      }
-
-      // Recursively process all child nodes
-      for (const tinyxml2::XMLElement * child = ele->FirstChildElement(); child != nullptr;
-           child = child->NextSiblingElement()) {
-        node.children.push_back(std::make_shared<behavior_tree_representation::Node>(process_node(child)));
-      }
-
-      return node;
-    };
-
-    // Iterate through all BehaviorTree elements
-    for (const tinyxml2::XMLElement * tree_ele = root->FirstChildElement("BehaviorTree"); tree_ele != nullptr;
-         tree_ele = tree_ele->NextSiblingElement("BehaviorTree")) {
-      const char * tree_name = tree_ele->Attribute("ID");
-      RCLCPP_DEBUG(this->get_logger(), "Processing tree: %s", tree_name ? tree_name : "unknown");
-      
-      document_out->trees.push_back(behavior_tree_representation::Tree());
-      document_out->trees.back().name = tree_name ? tree_name : "unknown";
-      
-      // Process all child nodes of this tree
-      for (const tinyxml2::XMLElement * child = tree_ele->FirstChildElement(); child != nullptr;
-           child = child->NextSiblingElement()) {
-        document_out->trees.back().root = process_node(child);
-      }
-    }
-
-    RCLCPP_INFO(this->get_logger(), "Successfully parsed tree document with %zu trees", document_out->trees.size());
-    return !contains_unsuported_nodes;
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to read tree definition: %s", e.what());
-    return false;
-  }
-}
-*/
 //attempt at using the TreeDocument API to read the tree definition, somehow not all information seems to be easylie retrivable from the tree document, especially regarding ports of nodes
 bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out){
   try {
@@ -231,10 +115,12 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(std::string tree_xml, s
       // Initialize root node from tree element
       behavior_tree_representation::Node root_node;
 
+      //get root node of the tree
       auto_apms_behavior_tree::core::TreeDocument::NodeElement root_node_element = tree_element.getFirstNode();
       
       std::cout << "Root node: " << root_node_element.getName() << ", Type: " << root_node_element.getRegistrationName() << std::endl;
 
+      // construct the representation of the root node, this function will recurese throug the entire tree -> TODO
       root_node = getNodeFromElement(root_node_element);
 
       document_out->trees.back().root = root_node;
