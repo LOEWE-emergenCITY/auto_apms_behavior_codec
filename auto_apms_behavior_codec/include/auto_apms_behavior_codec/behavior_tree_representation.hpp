@@ -139,6 +139,8 @@ struct Document {
   void print() const;
   //serializes the document using CBOR using the given dictionary as reference for node and port type codes
   std::vector<uint8_t> serialize(std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
+  // Deserialize CBOR into a Document using the provided dictionary manager
+  bool deserialize(const std::vector<uint8_t>& data, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager);
 };
 
 } // namespace behavior_tree_representation

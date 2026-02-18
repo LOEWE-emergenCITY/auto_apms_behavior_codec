@@ -133,6 +133,17 @@ DictionaryNode DictionaryManager::get_dictionary_info_by_name(const std::string&
   }
 }
 
+DictionaryNode DictionaryManager::get_dictionary_info_by_id(uint32_t dictionary_id)
+{
+  for (const auto & entry : this->dictionary_map_) {
+    if (entry.second.id == dictionary_id) {
+      return entry.second;
+    }
+  }
+  RCLCPP_WARN(rclcpp::get_logger("DictionaryManager"), "Dictionary id %u not found.", dictionary_id);
+  return DictionaryNode(false, 0, std::string("unknown"));
+}
+
 void DictionaryManager::print_dictionary()
 {
   std::cout << "Dictionary contents:" << std::endl;

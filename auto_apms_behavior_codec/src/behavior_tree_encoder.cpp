@@ -281,6 +281,19 @@ int main(int argc, char * argv[])
       std::ofstream outfile("encoded.bin", std::ios::out | std::ios::binary); 
       outfile.write(reinterpret_cast<const char*>(encoded_data.data()),
               static_cast<std::streamsize>(encoded_data.size()));      
+      // --- Decoding test: deserialize the encoded bytes and print the reconstructed Document
+      {
+        behavior_tree_representation::Document decoded_doc;
+        // create a fresh dictionary manager for decoding
+        auto dict = std::make_shared<DictionaryManager>();
+        bool ok_decode = decoded_doc.deserialize(encoded_data, dict);
+        if(ok_decode){
+          std::cout << "Decoded Document:" << std::endl;
+          decoded_doc.print();
+        } else {
+          std::cerr << "Decoding test failed" << std::endl;
+        }
+      }
       // Test XML reconstruction
       //std::string reconstructed_xml = node->reconstructXML(*document);
       //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
