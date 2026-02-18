@@ -36,14 +36,16 @@ bool Node::serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_co
   uint8_t arrayBuf[1024]; 
   cbor_encoder_init(&arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
+  uint arraySize = children.size()!=0 ? 3 : 2 ;
   //create array containing the nodes basic information: type code, an array of ports and an array of children
-  cbor_encoder_create_array(encoder, &arrayEncoder, 3);
+  cbor_encoder_create_array(encoder, &arrayEncoder, arraySize);
   cbor_encode_uint(&arrayEncoder, dictionary_manager->get_dictionary_info_by_name(type_name).id);
 
   CborEncoder portsArrayEncoder;
   uint8_t portsArrayBuf[1024];  // allocate a large enough buffer for the ports array
   cbor_encoder_init(&portsArrayEncoder, portsArrayBuf, sizeof(portsArrayBuf), 0);
 
+  //create array for ports
   cbor_encoder_create_array(&arrayEncoder, &portsArrayEncoder, ports.size());
   for(std::shared_ptr<Port> port : ports){
     std::cout << "Serializing port: " << port->getID() << std::endl;
@@ -52,15 +54,18 @@ bool Node::serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_co
   // close the ports array
   cbor_encoder_close_container_checked(&arrayEncoder, &portsArrayEncoder);
 
-  CborEncoder childrenArrayEncoder;
-  uint8_t childrenArrayBuf[1024];  // allocate a large enough buffer for the children array
-  cbor_encoder_init(&childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
-  cbor_encoder_create_array(&arrayEncoder, &childrenArrayEncoder, children.size());
-  for(std::shared_ptr<Node> child : children){
-    child->serialize(&childrenArrayEncoder, dictionary_manager);
+  if(children.size()!=0){
+    CborEncoder childrenArrayEncoder;
+    uint8_t childrenArrayBuf[1024];  // allocate a large enough buffer for the children array
+    cbor_encoder_init(&childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
+    cbor_encoder_create_array(&arrayEncoder, &childrenArrayEncoder, children.size());
+    for(std::shared_ptr<Node> child : children){
+      child->serialize(&childrenArrayEncoder, dictionary_manager);
+    }
+    // close the children array
+    cbor_encoder_close_container_checked(&arrayEncoder, &childrenArrayEncoder);
   }
-  // close the children array
-  cbor_encoder_close_container_checked(&arrayEncoder, &childrenArrayEncoder);
+
   // close the main array
   cbor_encoder_close_container_checked(encoder, &arrayEncoder);
 

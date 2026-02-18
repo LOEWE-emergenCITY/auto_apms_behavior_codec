@@ -11,7 +11,7 @@ The document object is encoded as a CBOR array with an element per tree. The fir
 A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potetnial room for improvement could be using as short as possible tree names.
 
 ### Node
-A node is encoded as a CBOR array with 3 elements, first the type code of the node, second an array of the node's ports and third an array off child nodes. All arrays may also have size 0. Potential room for imrpovement could be omitting empty arrays completely.
+A node is encoded as a CBOR array with 3 elements, first the type code of the node, second an array of the node's ports and third an array off child nodes. All arrays may also have size 0. Empty arrays of children are omitted.
 
 ### Ports
 Each port consists of an array, the elements of which depend on the type of port. Currently all ports conaint the port id (just a mapping of the ports position in the node) this can be ommited if it is known that the ports are always ordered in a specific way.
