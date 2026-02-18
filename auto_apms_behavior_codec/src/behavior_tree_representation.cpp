@@ -17,7 +17,9 @@ void Node::print() const{
     } else if (auto port_string = dynamic_cast<PortString*>(port.get())) {
       std::cout << port_string->value << " (string)" << std::endl;
     } else if (auto port_any = dynamic_cast<PortAnyTypeAllowed*>(port.get())) {
-      std::cout << "AnyTypeAllowed: "<< port_any->value << std::endl;
+      std::cout << "AnyTypeAllowed: " << port_any->value << std::endl;
+    } else if (auto port_subtree = dynamic_cast<PortSubTreeSpecial*>(port.get())) {
+      std::cout << "SubTreeSpecial: " << port_subtree->name << " = " << port_subtree->value << std::endl;
     } else {
       std::cout << "Unknown port type" << std::endl;
     }
