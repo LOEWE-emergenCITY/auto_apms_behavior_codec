@@ -30,16 +30,28 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
   behavior_tree_representation::Node result;
   result.type_name = dict_entry.name;
   result.instance_name = node_element.getName();
-  // special handling for subtree:
+  // special handling for subtree ports, work directly on xml
+  // An additional question could be if sub trees can have child nodes? are they handled correctly
   if(dict_entry.name == "SubTree"){
-    uint32_t number_of_ports = node_element.getPortNames().size();
-    std::cout << "Sub tree has " << number_of_ports << " ports" << std::endl;
+    auto_apms_behavior_tree::core::TreeDocument::NodeElement copy_element = node_element;
+    tinyxml2::XMLElement* node_xml = copy_element.getXMLElement();
+    std::cout << "Handling SubTree, XML name: "<< node_xml->Name() << std::endl;
+    const tinyxml2::XMLAttribute* attr = node_xml->FirstAttribute();
+    uint attr_number = 0;
+    while (attr)
+    {
+      if(std::string(attr->Name()) == "_autoremap"){
+        std::cout<< "Handeling SubTree autoremap" << std::endl;
+        result.ports.push_back(std::make_shared<behavior_tree_representation::PortBool>(attr->Value() == "true", result.ports.size()));
 
-    std::map<std::string, std::string> port_values = node_element.getPorts();
-
-    for(auto port : port_values){
-      std::cout << "Port: " << port.first << " = " << port.second << std::endl;
-      //apparently the ports are not automatically parsed
+      }
+      else{
+        std::cout<<"Handling attribute: " << attr->Name() <<std::endl;
+        result.ports.push_back(std::make_shared<behavior_tree_representation::PortSubTreeSpecial>(behavior_tree_representation::PortSubTreeSpecial(attr->Value(), attr->Name(), attr_number )));
+        
+      }
+      attr_number++;
+      attr = attr->Next();
     }
   }
   else{

@@ -93,7 +93,24 @@ struct PortAnyTypeAllowed : public Port {
   int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
 };
 
+//special hadling for ports of subtree, leads to much less efficient encoding, personally, i think SubTrees should be avoided, or some large change be made
+struct PortSubTreeSpecial : public Port {
+  explicit PortSubTreeSpecial(std::string v, std::string name, int16_t id) : value(v), name(name), id(id) {}
+  uint16_t getID() const override { return this->id; }
 
+  std::string getType() const override { return "SubTreeSpecial";};
+
+  //store value from XML
+  std::string value;
+
+  //store Attribute Name from XML
+  std::string name;
+
+  //serializes the Port using a given CBOR encoder object 
+  bool serialize(CborEncoder* encoder) const override;
+  private:
+  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+};
 
 struct Node {
   std::string type_name;
