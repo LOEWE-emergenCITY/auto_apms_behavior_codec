@@ -278,6 +278,9 @@ int main(int argc, char * argv[])
         std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
       }
       std::cout << std::dec << std::endl; // Reset to decimal
+      std::ofstream outfile("encoded.bin", std::ios::out | std::ios::binary); 
+      outfile.write(reinterpret_cast<const char*>(encoded_data.data()),
+              static_cast<std::streamsize>(encoded_data.size()));      
       // Test XML reconstruction
       //std::string reconstructed_xml = node->reconstructXML(*document);
       //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());

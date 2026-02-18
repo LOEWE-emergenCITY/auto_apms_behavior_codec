@@ -5,20 +5,23 @@ Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air missio
 ## Message Fromat
 The current approach for message encoding is the following:
 ### Document
-The document object is encoded as a CBOR array with an element per tree. The first conatined tree is the main tree to execute.
+The document object is encoded as a CBOR array with an element per tree. The first contained tree is the main tree to execute.
 
 ### Behavior Tree
-A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potetnial room for improvement could be using as short as possible tree names.
+A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potential room for improvement could be using as short as possible tree names.
 
 ### Node
 A node is encoded as a CBOR array with 3 elements, first the type code of the node, second an array of the node's ports and third an array off child nodes. All arrays may also have size 0. Empty arrays of children are omitted.
 
 ### Ports
-Each port consists of an array, the elements of which depend on the type of port. Currently all ports conaint the port id (just a mapping of the ports position in the node) this can be ommited if it is known that the ports are always ordered in a specific way.
+Each port consists of an array, the elements of which depend on the type of port. Currently all ports contain the port id (just a mapping of the ports position in the node) this can be omitted if it is known that the ports are always ordered in a specific way.
+
+#### Special Handling of SubTree Ports
+The ports of a SubTree are not known beforehand, therefore the names of the ports are included in the encoded version and the value as string. Additionally the "_autoremap" field is included as bool.
 
 ### Current State
 Currently the encoding is functional, exept for handling of SubTrees. The [example document](auto_apms_behavior_codec_examples/behavior/hello_world.xml) is encoded to: 
-`82 82 64 4d 61 69 6e 83 18 19 80 82 83 18 1e 80 80 83 18 1e 80 80 82 65 50 72 69 6e 74 83 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f 80`
+`82 82 61 4d 83 18 19 80 82 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 48 65 6c 6c 6f 02 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 57 6f 72 6c 64 02 82 61 50 82 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f`
 
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
