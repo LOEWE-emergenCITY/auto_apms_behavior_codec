@@ -96,8 +96,8 @@ bool PortInt::serialize(CborEncoder* encoder) const {
   uint8_t portArrayBuf[1024];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
-  cbor_encode_uint(encoder, this->getID());
-  cbor_encode_int(encoder, this->value);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_int(portArrayEncoder, this->value);
   cbor_encoder_close_container_checked(encoder, portArrayEncoder);
   delete portArrayEncoder;
   
@@ -109,8 +109,8 @@ bool PortFloat::serialize(CborEncoder* encoder) const {
   uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
-  cbor_encode_uint(encoder, this->getID());
-  cbor_encode_float(encoder, this->value);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_float(portArrayEncoder, this->value);
   cbor_encoder_close_container_checked(encoder, portArrayEncoder);
   delete[] portArrayBuf;
   delete portArrayEncoder;
@@ -123,8 +123,8 @@ bool PortBool::serialize(CborEncoder* encoder) const {
   uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
-  cbor_encode_uint(encoder, this->getID());
-  cbor_encode_boolean(encoder, this->value);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_boolean(portArrayEncoder, this->value);
   cbor_encoder_close_container_checked(encoder, portArrayEncoder);
   delete[] portArrayBuf;
   delete portArrayEncoder;
