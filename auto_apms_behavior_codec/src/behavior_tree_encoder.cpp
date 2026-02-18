@@ -61,11 +61,14 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
           port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(std::stof(port_value), result.ports.size());
         }
         //handle AnyTypeALlowed as string, this might work
-        else if(port_info.type == "std::string" || port_info.type == "BT::AnyTypeAllowed"){
+        else if(port_info.type == "std::string"){
           port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, result.ports.size());
         }
         else if(port_info.type == "bool"){
           port_ptr = std::make_shared<behavior_tree_representation::PortBool>(port_value == "true", result.ports.size());
+        }
+        else if(port_info.type == "BT::AnyTypeAllowed"){
+          port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
         }
 
         if(port_ptr){

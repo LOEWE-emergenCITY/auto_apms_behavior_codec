@@ -18,11 +18,16 @@ struct Port {
   virtual uint16_t getID() const = 0;
   //serializes the Port using a given CBOR encoder object, implementation depending on the type of the port
   virtual bool serialize(CborEncoder* encoder) const = 0;
+
+  virtual std::string getType() const = 0;
 };
 
 struct PortInt : public Port {
   explicit PortInt(int32_t v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
+  
+  std::string getType() const override { return "Int";};
+
   int32_t value;
 
   //serializes the Port using a given CBOR encoder object
@@ -34,6 +39,9 @@ struct PortInt : public Port {
 struct PortFloat : public Port {
   explicit PortFloat(float v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "Float";};
+
   float value;
 
   //serializes the Port using a given CBOR encoder object
@@ -45,6 +53,9 @@ struct PortFloat : public Port {
 struct PortString : public Port {
   explicit PortString(const std::string& v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "String";};
+
   std::string value;
 
   //serializes the Port using a given CBOR encoder object
@@ -56,6 +67,9 @@ struct PortString : public Port {
 struct PortBool : public Port {
   explicit PortBool(bool v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "Bool";};
+
   bool value;
 
   //serializes the Port using a given CBOR encoder object
@@ -65,9 +79,13 @@ struct PortBool : public Port {
 };
 
 struct PortAnyTypeAllowed : public Port {
-  explicit PortAnyTypeAllowed(BT::AnyTypeAllowed v, int16_t id) : value(v), id(id) {}
+  explicit PortAnyTypeAllowed(std::string v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
-  BT::AnyTypeAllowed value;  // Binary blob data
+
+  std::string getType() const override { return "AnyTypeAllowed";};
+
+  //just store exactly what is written in the xml
+  std::string value;
 
   //serializes the Port using a given CBOR encoder object 
   bool serialize(CborEncoder* encoder) const override;
