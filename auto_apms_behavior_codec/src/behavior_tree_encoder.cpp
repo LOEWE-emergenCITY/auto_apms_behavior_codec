@@ -8,14 +8,52 @@
 
 using namespace auto_apms_behavior_codec;
 
-BehaviorTreeEncoder::BehaviorTreeEncoder()
+BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in, std::string encoded_out, std::shared_ptr<DictionaryManager> dictionary_manager)
     : rclcpp::Node("behavior_tree_encoder")
 {
   // Initialize the dictionary manager
-  this->dictionary_manager_ = std::make_unique<DictionaryManager>();
+  this->dictionary_manager_ = dictionary_manager;
 
+  std::cout << "BehaviorTreeEncoder will use the following dictionary:" << std::endl;
   this->dictionary_manager_->print_dictionary();
+
+  // Set up subscription for incoming XML messages
+  xml_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
+    "xml_in", 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
+  
+  // Set up publisher for encoded messages
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>("encoded_out", 10);
+
 }
+
+void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg) {
+  RCLCPP_INFO(this->get_logger(), "Received XML message of length %zu", msg->tree_xml_message.size());
+  
+  std::unique_ptr<behavior_tree_representation::Document> document;
+
+  //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
+  bool ok = this->readTreeDefinitionFromXML(msg->tree_xml_message, document);
+
+  if (ok && document) {
+    //document->print();
+    std::vector<uint8_t> encoded_data = this->encode(*document);
+
+    std::cout << "Encoded data (hex): ";
+    for (uint8_t byte : encoded_data) {
+      std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+    }
+  std::cout << std::dec << std::endl; // Reset to decimal
+
+  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedMessage();
+  encoded_msg.serialized_message = encoded_data;
+  encoded_publisher_->publish(encoded_msg);
+
+  RCLCPP_INFO(this->get_logger(), "Published encoded message of length %zu", encoded_data.size());
+  } else {
+    RCLCPP_ERROR(this->get_logger(), "Failed to parse XML message");
+  }
+}
+
 
 std::vector<uint8_t> BehaviorTreeEncoder::encode(const std::string& behavior_tree_yaml)
 {
@@ -161,90 +199,6 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree
   }
 }
 
-std::string BehaviorTreeEncoder::reconstructXML(const behavior_tree_representation::Document& document) {
-  try {
-    tinyxml2::XMLDocument xml_doc;
-    
-    // Create the root element
-    tinyxml2::XMLElement* root = xml_doc.NewElement("root");
-    xml_doc.InsertFirstChild(root);
-    
-    // Add BTCPP format and main tree attributes
-    root->SetAttribute("BTCPP_format", "4");
-    if (!document.main_tree_to_execute.empty()) {
-      root->SetAttribute("main_tree_to_execute", document.main_tree_to_execute.c_str());
-    }
-    
-    // Function to recursively reconstruct nodes
-    std::function<tinyxml2::XMLElement*(const behavior_tree_representation::Node&)> reconstruct_node;
-    reconstruct_node = [&](const behavior_tree_representation::Node& node) -> tinyxml2::XMLElement* {
-      tinyxml2::XMLElement* node_element = xml_doc.NewElement(node.type_name.c_str());
-      
-      // Add instance name if it differs from registration name
-      if (!node.instance_name.empty() && node.instance_name != node.type_name) {
-        node_element->SetAttribute("name", node.instance_name.c_str());
-      }
-      
-      // Add ports as attributes
-      for (const auto& port : node.ports) {
-        std::string port_value;
-        
-        // Determine port type and convert value to string
-        if (auto port_int = std::dynamic_pointer_cast<behavior_tree_representation::PortInt>(port)) {
-          port_value = std::to_string(port_int->value);
-        } else if (auto port_float = std::dynamic_pointer_cast<behavior_tree_representation::PortFloat>(port)) {
-          port_value = std::to_string(port_float->value);
-        } else if (auto port_bool = std::dynamic_pointer_cast<behavior_tree_representation::PortBool>(port)) {
-          port_value = port_bool->value ? "true" : "false";
-        } else if (auto port_string = std::dynamic_pointer_cast<behavior_tree_representation::PortString>(port)) {
-          port_value = port_string->value;
-        } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
-          //TODO handle AnyTypeAllowed
-        }
-        
-        // Find port name from dictionary
-        DictionaryNode dict_node = this->dictionary_manager_->get_dictionary_info_by_name(node.type_name);
-        if (port->getID() < dict_node.port_types.size()) {
-          const auto& port_info = dict_node.port_types[port->getID()];
-          node_element->SetAttribute(port_info.name.c_str(), port_value.c_str());
-        }
-      }
-      
-      // Recursively add child nodes
-      for (const auto& child : node.children) {
-        tinyxml2::XMLElement* child_element = reconstruct_node(*child);
-        node_element->InsertEndChild(child_element);
-      }
-      
-      return node_element;
-    };
-    
-    // Reconstruct all trees
-    for (const auto& tree : document.trees) {
-      tinyxml2::XMLElement* tree_element = xml_doc.NewElement("BehaviorTree");
-      tree_element->SetAttribute("ID", tree.name.c_str());
-      
-      // Add the root node of the tree as a child
-      if (!tree.root.type_name.empty()) {
-        tinyxml2::XMLElement* root_node = reconstruct_node(tree.root);
-        tree_element->InsertEndChild(root_node);
-      }
-      
-      root->InsertEndChild(tree_element);
-    }
-    
-    // Convert to string
-    tinyxml2::XMLPrinter printer;
-    xml_doc.Print(&printer);
-    
-    RCLCPP_INFO(this->get_logger(), "Successfully reconstructed XML from document");
-    return printer.CStr();
-    
-  } catch (const std::exception& e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reconstruct XML: %s", e.what());
-    return "";
-  }
-}
 
 std::vector<uint8_t> BehaviorTreeEncoder::encode(behavior_tree_representation::Document& document) {
   return document.serialize(dictionary_manager_);
@@ -253,54 +207,32 @@ std::vector<uint8_t> BehaviorTreeEncoder::encode(behavior_tree_representation::D
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<BehaviorTreeEncoder>();
 
-    // Read example XML and test readTreeDefinition
-  const std::string xml_path = "/home/hiwi/orcas-ws/src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml";
-  std::ifstream in(xml_path);
-  if (in) {
-    std::stringstream ss; ss << in.rdbuf();
-    const std::string xml = ss.str();
+  // create a fresh manager for encoding/decoding
+  auto dict = std::make_shared<DictionaryManager>();
+
+  //create the encoder, TODO: make topics configurable
+  auto node = std::make_shared<BehaviorTreeEncoder>("xml_in", "encoded_out", dict);
+
+
+
+  /*
+  // --- Decoding test: deserialize the encoded bytes and print the reconstructed Document
+  
+    behavior_tree_representation::Document decoded_doc;
     
-    std::unique_ptr<behavior_tree_representation::Document> document;
-
-    //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
-    bool ok = node->readTreeDefinitionFromXML(xml, document);
-
-    RCLCPP_INFO(node->get_logger(), "readTreeDefinitionFromDocument returned: %s", ok ? "true" : "false");
-    
-    if (ok && document) {
-      //document->print();
-      std::vector<uint8_t> encoded_data = node->encode(*document);
-
-      std::cout << "Encoded data (hex): ";
-      for (uint8_t byte : encoded_data) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
-      }
-      std::cout << std::dec << std::endl; // Reset to decimal
-      std::ofstream outfile("encoded.bin", std::ios::out | std::ios::binary); 
-      outfile.write(reinterpret_cast<const char*>(encoded_data.data()),
-              static_cast<std::streamsize>(encoded_data.size()));      
-      // --- Decoding test: deserialize the encoded bytes and print the reconstructed Document
-      {
-        behavior_tree_representation::Document decoded_doc;
-        // create a fresh dictionary manager for decoding
-        auto dict = std::make_shared<DictionaryManager>();
-        bool ok_decode = decoded_doc.deserialize(encoded_data, dict);
-        if(ok_decode){
-          std::cout << "Decoded Document:" << std::endl;
-          decoded_doc.print();
-        } else {
-          std::cerr << "Decoding test failed" << std::endl;
-        }
-      }
-      // Test XML reconstruction
-      //std::string reconstructed_xml = node->reconstructXML(*document);
-      //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
+    bool ok_decode = decoded_doc.deserialize(encoded_data, dict);
+    if(ok_decode){
+      std::cout << "Decoded Document:" << std::endl;
+      decoded_doc.print();
+    } else {
+      std::cerr << "Decoding test failed" << std::endl;
     }
-  } else {
-    RCLCPP_WARN(node->get_logger(), "Could not open example XML: %s", xml_path.c_str());
-  }
+  
+  //Test XML reconstruction
+  //std::string reconstructed_xml = node->reconstructXML(*document);
+  //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
+  */
   
   rclcpp::shutdown();
   return 0;

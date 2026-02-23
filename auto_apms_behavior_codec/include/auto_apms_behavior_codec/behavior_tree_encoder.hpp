@@ -8,14 +8,21 @@
 #include "auto_apms_behavior_codec/behavior_tree_representation.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 
+#include "auto_apms_behavior_codec_interfaces/msg/tree_xml_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/serialized_message.hpp"
+
 namespace auto_apms_behavior_codec
 {
-  // handles encoding of behavior trees into a binary format, currently only minimal skeleton in order to be able to run a Ros node and call the dictionary manager
+  // handles encoding of behavior trees into a binary format, receives XML encoded Behavior Trees on Topic passed in the constructor as "xml_in" and sends the encoded message to the topic passed as "encoded_out"
+  // encoding happens based on the dictionary passed in the constructor
   class BehaviorTreeEncoder : public rclcpp::Node
   {
   public:
-      BehaviorTreeEncoder();
+      // constructor takes in the topic names for the XML input and the encoded output, as well as a shared pointer to a dictionary manager
+      BehaviorTreeEncoder(std::string xml_in, std::string encoded_out, std::shared_ptr<DictionaryManager> dictionary_manager);
+
       ~BehaviorTreeEncoder() = default;
+
       std::vector<uint8_t> encode(const std::string& behavior_tree_yaml);
 
       std::vector<uint8_t> encode(behavior_tree_representation::Document& document);
@@ -46,14 +53,21 @@ namespace auto_apms_behavior_codec
           return readTreeDefinitionFromDocument(tree_doc, document_out);
         }
 
-      std::string reconstructXML(const behavior_tree_representation::Document& document);
+      
 
   private:
+      // keep a reference to the dictionary for encoding
       std::shared_ptr<DictionaryManager> dictionary_manager_;
 
-      behavior_tree_representation::Tree tree;
+      //subscription for incoming XML encoded Trees
+      rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>::SharedPtr xml_subscription_;
+
+      //publisher for binary encoded behavior trees
+      rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr encoded_publisher_;
 
       behavior_tree_representation::Node getNodeFromElement(const auto_apms_behavior_tree::core::TreeDocument::NodeElement& node_element);
+
+      void xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg);
   };
 
-} 
+}
