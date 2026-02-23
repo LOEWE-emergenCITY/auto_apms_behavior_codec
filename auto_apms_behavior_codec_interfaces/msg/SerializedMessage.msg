@@ -1,1 +1,1 @@
-string serialized_message
+uint8[] serialized_message

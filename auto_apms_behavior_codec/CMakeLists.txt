@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(auto_apms_behavior_tree_core REQUIRED)
+find_package(auto_apms_behavior_codec_interfaces REQUIRED)
 
 
 
@@ -55,6 +56,7 @@ add_executable(behavior_tree_encoder_node src/behavior_tree_encoder.cpp)
 # Add include directory to encoder
 target_include_directories(behavior_tree_encoder_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # very unsure if this is the right way to do this
   $<INSTALL_INTERFACE:include>)
 
 # Link encoder with dependencies
