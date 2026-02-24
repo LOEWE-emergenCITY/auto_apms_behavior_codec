@@ -13,6 +13,7 @@
 
 namespace auto_apms_behavior_codec
 {
+  //TODO, still untested
   class BehaviorTreeDecoder : public rclcpp::Node
   {
   public:
@@ -23,5 +24,17 @@ namespace auto_apms_behavior_codec
 
   private:
     std::string reconstructXML(const behavior_tree_representation::Document& document);
+
+    // keep a reference to the dictionary for encoding
+    std::shared_ptr<DictionaryManager> dictionary_manager_;
+
+    //subscription for incoming encoded Trees
+    rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr encoded_subscription_;
+
+    //publisher for XML behavior trees
+    rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>::SharedPtr xml_publisher_;
+
+    void encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg);
+
   };
 }

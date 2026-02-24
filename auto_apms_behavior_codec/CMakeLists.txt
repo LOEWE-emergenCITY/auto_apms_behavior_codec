@@ -73,9 +73,28 @@ target_link_libraries(behavior_tree_encoder_node PRIVATE
   ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
-# Install the executable
+# Add behavior tree decoder executable
+add_executable(behavior_tree_decoder_node src/behavior_tree_decoder.cpp)
+
+# Add include directory to decoder
+target_include_directories(behavior_tree_decoder_node PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # this is not required in the example but without it the includes are not found
+  $<INSTALL_INTERFACE:include>)
+
+# Link decoder with dependencies
+target_link_libraries(behavior_tree_decoder_node PRIVATE
+  dictionary_manager
+  rclcpp::rclcpp
+  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
+  behavior_tree_representation
+  ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
+)
+
+# Install the executables
 install(
   TARGETS behavior_tree_encoder_node
+          behavior_tree_decoder_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
