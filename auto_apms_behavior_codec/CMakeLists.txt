@@ -46,13 +46,13 @@ target_link_libraries(dictionary_manager PUBLIC
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   tinycbor
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS} # attempt at linking the interfaces, not working
+  ${auto_apms_behavior_codec_interfaces_TARGETS} # attempt at linking the interfaces, not working
 )
 
 target_link_libraries(behavior_tree_representation PUBLIC 
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   tinycbor
-  ${auto_apms_codec_interfaces_TARGETS}
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
 )
 
 # Add behavior tree encoder executable
@@ -61,7 +61,6 @@ add_executable(behavior_tree_encoder_node src/behavior_tree_encoder.cpp)
 # Add include directory to encoder
 target_include_directories(behavior_tree_encoder_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # this is not required in the example but without it the includes are not found
   $<INSTALL_INTERFACE:include>)
 
 # Link encoder with dependencies
@@ -70,7 +69,7 @@ target_link_libraries(behavior_tree_encoder_node PRIVATE
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
+  ${auto_apms_behavior_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
 # Add behavior tree decoder executable
@@ -79,7 +78,6 @@ add_executable(behavior_tree_decoder_node src/behavior_tree_decoder.cpp)
 # Add include directory to decoder
 target_include_directories(behavior_tree_decoder_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # this is not required in the example but without it the includes are not found
   $<INSTALL_INTERFACE:include>)
 
 # Link decoder with dependencies
@@ -88,7 +86,7 @@ target_link_libraries(behavior_tree_decoder_node PRIVATE
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
+  ${auto_apms_behavior_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
 # Install the executables
