@@ -3,6 +3,7 @@
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 #include "auto_apms_behavior_codec/dictionary_manager.hpp"
 
+
 namespace auto_apms_behavior_codec
 {
 
@@ -134,5 +135,25 @@ void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_int
     RCLCPP_ERROR(this->get_logger(), "Failed to deserialize message into Document");
   }
 }
-
 } // namespace auto_apms_behavior_codec
+
+
+using namespace auto_apms_behavior_codec;
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+
+  // create a fresh manager for encoding/decoding
+  auto dict = std::make_shared<DictionaryManager>();
+
+  //create the encoder, TODO: make topics configurable, currently this subscribes to the Encode out topic of the encoder
+  auto node = std::make_shared<BehaviorTreeDecoder>("encoded_out", "xml_out", dict);
+  
+  rclcpp::spin(node);
+
+  rclcpp::shutdown();
+  return 0;
+}
+
+
