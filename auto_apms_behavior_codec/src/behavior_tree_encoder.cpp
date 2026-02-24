@@ -19,10 +19,10 @@ BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in, std::string encoded
 
   // Set up subscription for incoming XML messages
   xml_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
-    "xml_in", 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
+    xml_in, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
   
   // Set up publisher for encoded messages
-  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>("encoded_out", 10);
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(encoded_out, 10);
 
 }
 
@@ -55,12 +55,6 @@ void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfa
 }
 
 
-std::vector<uint8_t> BehaviorTreeEncoder::encode(const std::string& behavior_tree_yaml)
-{
-  // TODO: Implement behavior tree encoding logic
-  return std::vector<uint8_t>();
-}
-
 behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const auto_apms_behavior_tree::core::TreeDocument::NodeElement& node_element){
   std::cout << "Processing node: " << node_element.getName() << " Type: " << node_element.getRegistrationName() << "" << std::endl;
   auto_apms_behavior_codec::DictionaryNode dict_entry = dictionary_manager_->get_dictionary_info_by_name(node_element.getRegistrationName());
@@ -80,7 +74,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
     {
       if(std::string(attr->Name()) == "_autoremap"){
         std::cout<< "Handeling SubTree autoremap" << std::endl;
-        result.ports.push_back(std::make_shared<behavior_tree_representation::PortBool>(attr->Value() == "true", result.ports.size()));
+        result.ports.push_back(std::make_shared<behavior_tree_representation::PortBool>(std::string(attr->Value()) == "true", result.ports.size()));
 
       }
       else{
@@ -131,7 +125,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
   // Recursively process children
   if(node_element.hasChildren()){
     auto_apms_behavior_tree::core::TreeDocument::NodeElement::ChildIterator child_it = node_element.begin();
-    for(child_it; child_it != node_element.end(); ++child_it){
+    for(; child_it != node_element.end(); ++child_it){
       behavior_tree_representation::Node child_node = getNodeFromElement(*child_it);
       result.children.push_back(std::make_shared<behavior_tree_representation::Node>(child_node));
     }
@@ -214,26 +208,25 @@ int main(int argc, char * argv[])
   //create the encoder, TODO: make topics configurable
   auto node = std::make_shared<BehaviorTreeEncoder>("xml_in", "encoded_out", dict);
 
-
-
   /*
-  // --- Decoding test: deserialize the encoded bytes and print the reconstructed Document
-  
-    behavior_tree_representation::Document decoded_doc;
+    // Read example XML and test readTreeDefinition
+  const std::string xml_path = "/home/hiwi/orcas-ws/src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml";
+  std::ifstream in(xml_path);
+  if (in) {
+    std::stringstream ss; ss << in.rdbuf();
+    const std::string xml = ss.str();
     
-    bool ok_decode = decoded_doc.deserialize(encoded_data, dict);
-    if(ok_decode){
-      std::cout << "Decoded Document:" << std::endl;
-      decoded_doc.print();
-    } else {
-      std::cerr << "Decoding test failed" << std::endl;
-    }
-  
-  //Test XML reconstruction
-  //std::string reconstructed_xml = node->reconstructXML(*document);
-  //RCLCPP_INFO(node->get_logger(), "Reconstructed XML (first 500 chars):\n%s", reconstructed_xml.substr(0, 500).c_str());
+    std::unique_ptr<behavior_tree_representation::Document> document;
+
+    //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
+    bool ok = node->readTreeDefinitionFromXML(xml, document);
+
+    RCLCPP_INFO(node->get_logger(), "readTreeDefinitionFromDocument returned: %s", ok ? "true" : "false");
+
+  }
   */
-  
+  rclcpp::spin(node);
+
   rclcpp::shutdown();
   return 0;
 }

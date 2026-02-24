@@ -25,6 +25,27 @@ Currently the encoding is functional, exept for handling of SubTrees. The [examp
 
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
+## Project Structure
+The package contains two ROS node, one for encoding and one for decoding. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic. The decoder does the opposite, it subscribes to the encoded version and publishes the XML representation.
+
+The encoder can, for example be run with:
+
+    ros2 run auto_apms_behavior_codec behavior_tree_encoder_node
+
+And the decoder with:
+
+    ros2 run auto_apms_behavior_codec behavior_tree_decoder_node
+
+Currently the `main` functions in the corresponding `.cpp` files must be adjusted to change the topics.
+
+Data can be sent to the xml input of the encoder with:
+
+    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: 'XML_HERE'}"
+
+From a file this could look like:
+
+    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml)'}"
+
 
 # Information about LoRa throughput
 The following is intended as a reference to judge possible lora throughput

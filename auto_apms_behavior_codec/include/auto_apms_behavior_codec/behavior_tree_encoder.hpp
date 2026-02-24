@@ -23,8 +23,6 @@ namespace auto_apms_behavior_codec
 
       ~BehaviorTreeEncoder() = default;
 
-      std::vector<uint8_t> encode(const std::string& behavior_tree_yaml);
-
       std::vector<uint8_t> encode(behavior_tree_representation::Document& document);
 
       // reads a tree definition from a TreeDocument and converts it to the internal representation

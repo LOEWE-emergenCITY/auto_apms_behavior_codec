@@ -46,13 +46,12 @@ target_link_libraries(dictionary_manager PUBLIC
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   tinycbor
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS} # attempt at linking the interfaces, not working
 )
 
 target_link_libraries(behavior_tree_representation PUBLIC 
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   tinycbor
-  ${auto_apms_codec_interfaces_TARGETS}
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
 )
 
 # Add behavior tree encoder executable
@@ -70,7 +69,7 @@ target_link_libraries(behavior_tree_encoder_node PRIVATE
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
+  ${auto_apms_behavior_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
 # Add behavior tree decoder executable
@@ -88,7 +87,7 @@ target_link_libraries(behavior_tree_decoder_node PRIVATE
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   behavior_tree_representation
-  ${auto_apms_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
+  ${auto_apms_behavior_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
 # Install the executables
