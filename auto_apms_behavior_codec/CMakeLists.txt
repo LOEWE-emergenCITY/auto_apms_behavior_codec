@@ -60,7 +60,6 @@ add_executable(behavior_tree_encoder_node src/behavior_tree_encoder.cpp)
 # Add include directory to encoder
 target_include_directories(behavior_tree_encoder_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # this is not required in the example but without it the includes are not found
   $<INSTALL_INTERFACE:include>)
 
 # Link encoder with dependencies
@@ -78,7 +77,6 @@ add_executable(behavior_tree_decoder_node src/behavior_tree_decoder.cpp)
 # Add include directory to decoder
 target_include_directories(behavior_tree_decoder_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/../auto_apms_behavior_codec_interfaces/rosidl_generator_cpp> # this is not required in the example but without it the includes are not found
   $<INSTALL_INTERFACE:include>)
 
 # Link decoder with dependencies
