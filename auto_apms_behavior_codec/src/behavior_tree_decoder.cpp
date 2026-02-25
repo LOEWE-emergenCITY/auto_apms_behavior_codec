@@ -39,6 +39,11 @@ std::string BehaviorTreeDecoder::reconstructXML(const behavior_tree_representati
 std::map<std::string, std::string> get_port_map(const behavior_tree_representation::Node& node) {
   std::map<std::string, std::string> port_map;
   for (const auto& port : node.ports) {
+    if (!port) {
+      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Null port pointer detected in node '%s'", node.type_name.c_str());
+      continue;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Port type in node '%s': %s", node.type_name.c_str(), port->getType().c_str());
     // Example: handle PortString, PortInt, PortFloat, PortBool, PortAnyTypeAllowed
     if (auto port_string = std::dynamic_pointer_cast<behavior_tree_representation::PortString>(port)) {
       port_map[port_string->getType()] = port_string->value;
@@ -50,8 +55,14 @@ std::map<std::string, std::string> get_port_map(const behavior_tree_representati
       port_map[port_bool->getType()] = port_bool->value ? "true" : "false";
     } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
       port_map[port_any->getType()] = port_any->value;
+    } else if (auto port_subtree = std::dynamic_pointer_cast<behavior_tree_representation::PortSubTreeSpecial>(port)) {
+      port_map[port_subtree->name] = port_subtree->value;
+      RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Handled SubTreeSpecial port: name='%s', value='%s'", port_subtree->name.c_str(), port_subtree->value.c_str());
+    } else {
+      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Unknown port type in node '%s'", node.type_name.c_str());
     }
   }
+  RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Port map for node '%s' has %zu entries", node.type_name.c_str(), port_map.size());
   return port_map;
 };
 
@@ -59,16 +70,24 @@ auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstructi
   const behavior_tree_representation::Node& node,
   auto_apms_behavior_tree::core::TreeDocument::NodeElement& base_node)
 {
+  RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Constructing node '%s'", node.type_name.c_str());
   // add ports to the node element
   auto port_map = get_port_map(node);
   base_node.setPorts(port_map);
 
   // recursively construct child nodes
   for (const auto& child : node.children) {
+    if (!child) {
+      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Null child node pointer detected in parent '%s'", node.type_name.c_str());
+      continue;
+    }
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Inserting child node '%s' into parent '%s'", child->type_name.c_str(), node.type_name.c_str());
     auto_apms_behavior_tree::core::TreeDocument::NodeElement child_element = base_node.insertNode(child->type_name);
     recursiveNodeConstruction(*child, child_element);
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing child node '%s'", child->type_name.c_str());
   }
 
+  RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing node '%s'", node.type_name.c_str());
   return base_node;
 
 }
