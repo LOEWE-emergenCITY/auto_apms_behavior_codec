@@ -23,7 +23,12 @@ namespace auto_apms_behavior_codec
     ~BehaviorTreeDecoder() = default;
 
   private:
+
+    // reconstruct an XML string from a behavior_tree_representation::Document
     std::string reconstructXML(const behavior_tree_representation::Document& document);
+
+    // translates a behavior_tree_representation::Tree to a TreeElement
+    auto_apms_behavior_tree::core::TreeDocument::TreeElement getTreeElementFromTree(const behavior_tree_representation::Tree& tree);
 
     // keep a reference to the dictionary for encoding
     std::shared_ptr<DictionaryManager> dictionary_manager_;

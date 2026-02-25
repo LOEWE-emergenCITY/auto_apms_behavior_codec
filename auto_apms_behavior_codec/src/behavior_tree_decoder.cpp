@@ -22,89 +22,66 @@ BehaviorTreeDecoder::BehaviorTreeDecoder(std::string encoded_in, std::string xml
 
 //TODO change to TreeDocument API
 std::string BehaviorTreeDecoder::reconstructXML(const behavior_tree_representation::Document& document) {
-  try {
-    tinyxml2::XMLDocument xml_doc;
-    
-    // Create the root element
-    tinyxml2::XMLElement* root = xml_doc.NewElement("root");
-    xml_doc.InsertFirstChild(root);
-    
-    // Add BTCPP format and main tree attributes
-    root->SetAttribute("BTCPP_format", "4");
-    if (!document.main_tree_to_execute.empty()) {
-      root->SetAttribute("main_tree_to_execute", document.main_tree_to_execute.c_str());
+  auto_apms_behavior_tree::core::TreeDocument tree_doc;
+
+  for (const auto& tree : document.trees) {
+    if(tree.name == document.main_tree_to_execute){
+      tree_doc.newTree(getTreeElementFromTree(tree)).makeRoot();
     }
-    
-    // Function to recursively reconstruct nodes
-    std::function<tinyxml2::XMLElement*(const behavior_tree_representation::Node&)> reconstruct_node;
-    reconstruct_node = [&](const behavior_tree_representation::Node& node) -> tinyxml2::XMLElement* {
-      tinyxml2::XMLElement* node_element = xml_doc.NewElement(node.type_name.c_str());
-      
-      // Add instance name if it differs from registration name
-      if (!node.instance_name.empty() && node.instance_name != node.type_name) {
-        node_element->SetAttribute("name", node.instance_name.c_str());
-      }
-      
-      // Add ports as attributes
-      for (const auto& port : node.ports) {
-        std::string port_value;
-        
-        // Determine port type and convert value to string
-        if (auto port_int = std::dynamic_pointer_cast<behavior_tree_representation::PortInt>(port)) {
-          port_value = std::to_string(port_int->value);
-        } else if (auto port_float = std::dynamic_pointer_cast<behavior_tree_representation::PortFloat>(port)) {
-          port_value = std::to_string(port_float->value);
-        } else if (auto port_bool = std::dynamic_pointer_cast<behavior_tree_representation::PortBool>(port)) {
-          port_value = port_bool->value ? "true" : "false";
-        } else if (auto port_string = std::dynamic_pointer_cast<behavior_tree_representation::PortString>(port)) {
-          port_value = port_string->value;
-        } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
-          //TODO handle AnyTypeAllowed
-        }
-        
-        // Find port name from dictionary
-        DictionaryNode dict_node = this->dictionary_manager_->get_dictionary_info_by_name(node.type_name);
-        if (port->getID() < dict_node.port_types.size()) {
-          const auto& port_info = dict_node.port_types[port->getID()];
-          node_element->SetAttribute(port_info.name.c_str(), port_value.c_str());
-        }
-      }
-      
-      // Recursively add child nodes
-      for (const auto& child : node.children) {
-        tinyxml2::XMLElement* child_element = reconstruct_node(*child);
-        node_element->InsertEndChild(child_element);
-      }
-      
-      return node_element;
-    };
-    
-    // Reconstruct all trees
-    for (const auto& tree : document.trees) {
-      tinyxml2::XMLElement* tree_element = xml_doc.NewElement("BehaviorTree");
-      tree_element->SetAttribute("ID", tree.name.c_str());
-      
-      // Add the root node of the tree as a child
-      if (!tree.root.type_name.empty()) {
-        tinyxml2::XMLElement* root_node = reconstruct_node(tree.root);
-        tree_element->InsertEndChild(root_node);
-      }
-      
-      root->InsertEndChild(tree_element);
+    else{
+      tree_doc.newTree(getTreeElementFromTree(tree));
     }
-    
-    // Convert to string
-    tinyxml2::XMLPrinter printer;
-    xml_doc.Print(&printer);
-    
-    RCLCPP_INFO(this->get_logger(), "Successfully reconstructed XML from document");
-    return printer.CStr();
-    
-  } catch (const std::exception& e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to reconstruct XML: %s", e.what());
-    return "";
   }
+
+  return tree_doc.writeToString();
 }
+
+std::map<std::string, std::string> get_port_map(const behavior_tree_representation::Node& node) {
+  std::map<std::string, std::string> port_map;
+  for (const auto& port : node.ports) {
+    // Example: handle PortString, PortInt, PortFloat, PortBool, PortAnyTypeAllowed
+    if (auto port_string = std::dynamic_pointer_cast<behavior_tree_representation::PortString>(port)) {
+      port_map[port_string->getType()] = port_string->value;
+    } else if (auto port_int = std::dynamic_pointer_cast<behavior_tree_representation::PortInt>(port)) {
+      port_map[port_int->getType()] = std::to_string(port_int->value);
+    } else if (auto port_float = std::dynamic_pointer_cast<behavior_tree_representation::PortFloat>(port)) {
+      port_map[port_float->getType()] = std::to_string(port_float->value);
+    } else if (auto port_bool = std::dynamic_pointer_cast<behavior_tree_representation::PortBool>(port)) {
+      port_map[port_bool->getType()] = port_bool->value ? "true" : "false";
+    } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
+      port_map[port_any->getType()] = port_any->value;
+    }
+  }
+  return port_map;
+};
+
+auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstruction(
+  const behavior_tree_representation::Node& node,
+  auto_apms_behavior_tree::core::TreeDocument::NodeElement& base_node)
+{
+  // add ports to the node element
+  auto port_map = get_port_map(node);
+  base_node.setPorts(port_map);
+
+  // recursively construct child nodes
+  for (const auto& child : node.children) {
+    auto_apms_behavior_tree::core::TreeDocument::NodeElement child_element = base_node.insertNode(child->type_name);
+    recursiveNodeConstruction(*child, child_element);
+  }
+
+  return base_node;
+
+}
+
+auto_apms_behavior_tree::core::TreeDocument::TreeElement BehaviorTreeDecoder::getTreeElementFromTree(const behavior_tree_representation::Tree& tree){
+
+  auto_apms_behavior_tree::core::TreeDocument working_tree_doc; // Tree Elements dont seem to be constructable independently from a Tree Document
+  auto_apms_behavior_tree::core::TreeDocument::TreeElement tree_element = working_tree_doc.newTree(tree.name);
+  auto_apms_behavior_tree::core::TreeDocument::NodeElement root = tree_element.insertNode(tree.root.type_name);
+  recursiveNodeConstruction(tree.root, root);
+  return tree_element;
+}
+
 
 //TODO, still untested
 void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg) {

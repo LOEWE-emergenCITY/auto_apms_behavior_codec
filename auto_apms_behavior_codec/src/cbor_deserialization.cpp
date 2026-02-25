@@ -288,6 +288,7 @@ bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<aut
     return false;
   }
 
+  
   for(size_t ti = 0; ti < treesCount; ++ti){
     // each tree is an array [name, root]
     if(!cbor_value_is_array(&treesIt)){
@@ -335,6 +336,11 @@ bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<aut
     }
 
     trees.push_back(t);
+
+    // the first tree in the serialized document is always the main tree to execute
+    if(ti == 0){
+      main_tree_to_execute = treeName;
+    }
   }
 
   // leaving trees array (not strictly necessary as parser will be discarded)

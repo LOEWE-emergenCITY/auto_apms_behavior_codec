@@ -135,7 +135,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
 }
 
 
-//attempt at using the TreeDocument API to read the tree definition, somehow not all information seems to be easilie retrivable from the tree document, especially regarding ports of nodes
+//read tree using the TreeDocument functions from Auto APMS
 bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree::core::TreeDocument& tree_doc, std::unique_ptr<behavior_tree_representation::Document>& document_out){
   try {
     
@@ -193,7 +193,7 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree
   }
 }
 
-
+// wraper around the documents serialize function
 std::vector<uint8_t> BehaviorTreeEncoder::encode(behavior_tree_representation::Document& document) {
   return document.serialize(dictionary_manager_);
 }
