@@ -19,7 +19,7 @@ namespace auto_apms_behavior_codec
   {
   public:
       // constructor takes in the topic names for the XML input and the encoded output, as well as a shared pointer to a dictionary manager
-      BehaviorTreeEncoder(std::string xml_in, std::string encoded_out, std::shared_ptr<DictionaryManager> dictionary_manager);
+      BehaviorTreeEncoder(std::string xml_in_topic, std::string encoded_out_topic, std::shared_ptr<DictionaryManager> dictionary_manager);
 
       ~BehaviorTreeEncoder() = default;
 
@@ -28,7 +28,7 @@ namespace auto_apms_behavior_codec
       // reads a tree definition from a TreeDocument and converts it to the internal representation
       bool readTreeDefinitionFromDocument(auto_apms_behavior_tree::core::TreeDocument& tree_doc, std::unique_ptr<behavior_tree_representation::Document>& document_out);
 
-      // TODO: parameter for node manifest to use
+      // creates a auto_apms_behavior_tree::core::TreeDocument from a XML string using the node manifests known by the dictionary manager.
       bool readTreeDefinitionFromXML(std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document>& document_out){
         // Validate that we have XML content
         if (tree_xml.empty()) {
@@ -61,9 +61,11 @@ namespace auto_apms_behavior_codec
 
       //publisher for binary encoded behavior trees
       rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr encoded_publisher_;
-
+      
+      // helaper function to get a behavior_tree_representation::Node from a TreeDocument::NodeElement, this is used for constructing the internal representation of the tree from the TreeDocument API
       behavior_tree_representation::Node getNodeFromElement(const auto_apms_behavior_tree::core::TreeDocument::NodeElement& node_element);
 
+      //callback for incoming XML messages, handles parsing and encoding
       void xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg);
   };
 

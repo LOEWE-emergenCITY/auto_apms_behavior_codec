@@ -8,7 +8,7 @@
 
 using namespace auto_apms_behavior_codec;
 
-BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in, std::string encoded_out, std::shared_ptr<DictionaryManager> dictionary_manager)
+BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in_topic, std::string encoded_out_topic, std::shared_ptr<DictionaryManager> dictionary_manager)
     : rclcpp::Node("behavior_tree_encoder")
 {
   // Initialize the dictionary manager
@@ -19,31 +19,33 @@ BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in, std::string encoded
 
   // Set up subscription for incoming XML messages
   xml_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
-    xml_in, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
+    xml_in_topic, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
   
   // Set up publisher for encoded messages
-  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(encoded_out, 10);
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(encoded_out_topic, 10);
 
 }
 
 void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg) {
   RCLCPP_INFO(this->get_logger(), "Received XML message of length %zu", msg->tree_xml_message.size());
   
+  // get a the tree as a Document (in our internal representation)
   std::unique_ptr<behavior_tree_representation::Document> document;
-
-  //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
   bool ok = this->readTreeDefinitionFromXML(msg->tree_xml_message, document);
 
+ 
   if (ok && document) {
-    //document->print();
+    // encode the document 
     std::vector<uint8_t> encoded_data = this->encode(*document);
 
+    // and print it for testing
     std::cout << "Encoded data (hex): ";
     for (uint8_t byte : encoded_data) {
       std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
     }
   std::cout << std::dec << std::endl; // Reset to decimal
 
+  // create the appropriate ROS message and publish
   auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedMessage();
   encoded_msg.serialized_message = encoded_data;
   encoded_publisher_->publish(encoded_msg);
@@ -62,6 +64,7 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
   behavior_tree_representation::Node result;
   result.type_name = dict_entry.name;
   result.instance_name = node_element.getName();
+  
   // special handling for subtree ports, work directly on xml
   // An additional question could be if sub trees can have child nodes? are they handled correctly
   if(dict_entry.name == "SubTree"){

@@ -26,15 +26,15 @@ std::string BehaviorTreeDecoder::reconstructXML(const behavior_tree_representati
   auto_apms_behavior_tree::core::TreeDocument tree_doc;
   tree_doc.registerNodes(this->dictionary_manager_->getNodeManifest());
   for (const auto& tree : document.trees) {
-    RCLCPP_INFO(this->get_logger(), "Processing tree '%s' for XML reconstruction", tree.name.c_str());
+    RCLCPP_DEBUG(this->get_logger(), "Processing tree '%s' for XML reconstruction", tree.name.c_str());
     if(tree.name == document.main_tree_to_execute){
       getTreeElementFromTree(tree, tree_doc).makeRoot();
     }
     else{
       getTreeElementFromTree(tree, tree_doc);
     }
-    RCLCPP_INFO(this->get_logger(), "Finished processing tree '%s'", tree.name.c_str());
-    RCLCPP_INFO(this->get_logger(), "Current state of TreeDocument after processing tree '%s':\n%s", tree.name.c_str(), tree_doc.writeToString().c_str());
+    RCLCPP_DEBUG(this->get_logger(), "Finished processing tree '%s'", tree.name.c_str());
+    RCLCPP_DEBUG(this->get_logger(), "Current state of TreeDocument after processing tree '%s':\n%s", tree.name.c_str(), tree_doc.writeToString().c_str());
   }
 
   return tree_doc.writeToString();
@@ -63,7 +63,7 @@ std::map<std::string, std::string> get_port_map(
       port_name = dict_node.port_types[port_id].name;
       RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u maps to name '%s' for node '%s'", port_id, port_name.c_str(), node.type_name.c_str());
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u out of range for node '%s' (has %zu ports)", port_id, node.type_name.c_str(), dict_node.port_types.size());
+      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u out of range for node '%s' (has %zu ports), disregard this warning for SubTrees", port_id, node.type_name.c_str(), dict_node.port_types.size());
       continue;
     }
     
@@ -81,7 +81,7 @@ std::map<std::string, std::string> get_port_map(
     } else if (auto port_subtree = std::dynamic_pointer_cast<behavior_tree_representation::PortSubTreeSpecial>(port)) {
       port_name = port_subtree->name;
       port_value = port_subtree->value;
-      RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Handled SubTreeSpecial port: name='%s', value='%s'", port_subtree->name.c_str(), port_subtree->value.c_str());
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled SubTreeSpecial port: name='%s', value='%s'", port_subtree->name.c_str(), port_subtree->value.c_str());
     } else {
       RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Unknown port type in node '%s'", node.type_name.c_str());
       continue;
@@ -109,7 +109,7 @@ auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstructi
     }
   }
   else{
-    RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Node '%s' is a SubTree, Handeling Ports Specially...", node.type_name.c_str());
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Node '%s' is a SubTree, Handeling Ports Specially...", node.type_name.c_str());
     auto port_map = get_port_map(node, dictionary_manager);
     // Wrap blackboard remapping values in curly brackets
     std::map<std::string, std::string> blackboard_remapping;
@@ -125,13 +125,13 @@ auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstructi
       RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Null child node pointer detected in parent '%s'", node.type_name.c_str());
       continue;
     }
-    RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Inserting child node '%s' into parent '%s'", child->type_name.c_str(), node.type_name.c_str());
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Inserting child node '%s' into parent '%s'", child->type_name.c_str(), node.type_name.c_str());
     auto_apms_behavior_tree::core::TreeDocument::NodeElement child_element = base_node.insertNode(child->type_name);
     recursiveNodeConstruction(*child, child_element, dictionary_manager);
-    RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing child node '%s'", child->type_name.c_str());
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing child node '%s'", child->type_name.c_str());
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing node '%s'", node.type_name.c_str());
+  RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing node '%s'", node.type_name.c_str());
   return base_node;
 
 }
@@ -166,7 +166,7 @@ void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_int
       xml_msg.tree_xml_message = xml_string;
       xml_publisher_->publish(xml_msg);
       
-      RCLCPP_INFO(this->get_logger(), "Published reconstructed XML message");
+      RCLCPP_INFO(this->get_logger(), "Published reconstructed XML message, content:\n%s", xml_string.c_str());
     } else {
       RCLCPP_ERROR(this->get_logger(), "Failed to reconstruct XML from Document");
     }

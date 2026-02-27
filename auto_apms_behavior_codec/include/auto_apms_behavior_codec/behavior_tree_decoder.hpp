@@ -39,6 +39,7 @@ namespace auto_apms_behavior_codec
     //publisher for XML behavior trees
     rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>::SharedPtr xml_publisher_;
 
+    //callback for incoming encoded messages, handles deserialization and XML reconstruction
     void encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg);
 
   };
