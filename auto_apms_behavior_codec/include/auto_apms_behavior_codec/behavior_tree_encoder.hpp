@@ -45,8 +45,7 @@ namespace auto_apms_behavior_codec
             return false;
           }
           
-          // this still needs correct implementation
-          tree_doc.registerNodes(this->dictionary_manager_->getNodeManifests().front());
+          tree_doc.registerNodes(this->dictionary_manager_->getNodeManifest());
 
           return readTreeDefinitionFromDocument(tree_doc, document_out);
         }

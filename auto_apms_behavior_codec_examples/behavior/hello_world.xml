@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4"
-      main_tree_to_execute="M">
-  <BehaviorTree ID="M">
+      main_tree_to_execute="Main">
+  <BehaviorTree ID="Main">
     <Sequence>
-      <SubTree ID="P"
+      <SubTree ID="Print"
                msg="Hello"/>
-      <SubTree ID="P"
+      <SubTree ID="Print"
                msg="World"/>
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="P">
+  <BehaviorTree ID="Print">
     <Logger message="{msg}"
             level="INFO"/>
   </BehaviorTree>

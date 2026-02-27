@@ -45,8 +45,10 @@ namespace auto_apms_behavior_codec
 
       void print_dictionary();
 
+      // get all node manifests used to build this dictionary
       std::vector<auto_apms_behavior_tree::core::NodeManifest> getNodeManifests();
 
+      //get a mereged manifest of all nodes handled by this dictionary
       auto_apms_behavior_tree::core::NodeManifest getNodeManifest();
 
     private:
