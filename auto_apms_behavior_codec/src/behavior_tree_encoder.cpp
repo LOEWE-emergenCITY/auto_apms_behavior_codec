@@ -101,23 +101,36 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
         std::string port_value = port_values.at(port_info.name);
         std::cout << "Node: " << result.instance_name << ", Port: " << port_info.name << " = " << port_value << "type: "<< port_info.type<< std::endl;
         std::shared_ptr<behavior_tree_representation::Port> port_ptr;
-        if(port_info.type == "int"){
-          port_ptr = std::make_shared<behavior_tree_representation::PortInt>(std::stoi(port_value), result.ports.size()); //result.ports.size() results in the index of the port in the dictionary entry, this corresponds to the ports id, //TODO: figure out if this can be omitted
+        try {
+          if(port_info.type == "int"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortInt>(std::stoi(port_value), result.ports.size());
+          }
+          else if(port_info.type == "unsigned int"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortUInt>(static_cast<uint32_t>(std::stoul(port_value)), result.ports.size());
+          }
+          else if(port_info.type == "float"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(std::stof(port_value), result.ports.size());
+          }
+          else if(port_info.type == "double"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortDouble>(std::stod(port_value), result.ports.size());
+          }
+          else if(port_info.type == "std::string"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, result.ports.size());
+          }
+          else if(port_info.type == "bool"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortBool>(port_value == "true", result.ports.size());
+          }
+          else if(port_info.type == "BT::AnyTypeAllowed"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
+          }
+          else {
+            // Unknown type, treat as invalid
+            port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(port_value, result.ports.size());
+          }
+        } catch (const std::exception& e) {
+          RCLCPP_ERROR(this->get_logger(), "Failed to convert port value '%s' for port '%s' of type '%s': %s. Including it as invalid.", port_value.c_str(), port_info.name.c_str(), port_info.type.c_str(), e.what());
+          port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(port_value, result.ports.size());
         }
-        else if(port_info.type == "float"){
-          port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(std::stof(port_value), result.ports.size());
-        }
-        //handle AnyTypeALlowed as string, this might work
-        else if(port_info.type == "std::string"){
-          port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, result.ports.size());
-        }
-        else if(port_info.type == "bool"){
-          port_ptr = std::make_shared<behavior_tree_representation::PortBool>(port_value == "true", result.ports.size());
-        }
-        else if(port_info.type == "BT::AnyTypeAllowed"){
-          port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
-        }
-
         if(port_ptr){
           result.ports.push_back(port_ptr);
         }

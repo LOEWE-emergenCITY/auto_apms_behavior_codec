@@ -72,8 +72,12 @@ std::map<std::string, std::string> get_port_map(
       port_value = port_string->value;
     } else if (auto port_int = std::dynamic_pointer_cast<behavior_tree_representation::PortInt>(port)) {
       port_value = std::to_string(port_int->value);
+    } else if (auto port_uint = std::dynamic_pointer_cast<behavior_tree_representation::PortUInt>(port)) {
+      port_value = std::to_string(port_uint->value);
     } else if (auto port_float = std::dynamic_pointer_cast<behavior_tree_representation::PortFloat>(port)) {
       port_value = std::to_string(port_float->value);
+    } else if (auto port_double = std::dynamic_pointer_cast<behavior_tree_representation::PortDouble>(port)) {
+      port_value = std::to_string(port_double->value);
     } else if (auto port_bool = std::dynamic_pointer_cast<behavior_tree_representation::PortBool>(port)) {
       port_value = port_bool->value ? "true" : "false";
     } else if (auto port_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAnyTypeAllowed>(port)) {
@@ -82,6 +86,10 @@ std::map<std::string, std::string> get_port_map(
       port_name = port_subtree->name;
       port_value = port_subtree->value;
       RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled SubTreeSpecial port: name='%s', value='%s'", port_subtree->name.c_str(), port_subtree->value.c_str());
+    } else if (auto port_invalid = std::dynamic_pointer_cast<behavior_tree_representation::PortInvalid>(port)) {
+      // Invalid port: value is already the blackboard key string (e.g. "{z}"), port_name from dictionary
+      port_value = port_invalid->value;
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled Invalid port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
     } else {
       RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Unknown port type in node '%s'", node.type_name.c_str());
       continue;

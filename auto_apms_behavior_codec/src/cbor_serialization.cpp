@@ -102,6 +102,18 @@ bool PortInt::serialize(CborEncoder* encoder) const {
   return true;
 }
 
+bool PortUInt::serialize(CborEncoder* encoder) const {
+  CborEncoder* portArrayEncoder = new CborEncoder();
+  uint8_t portArrayBuf[1024];
+  cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
+  cbor_encoder_create_array(encoder, portArrayEncoder, 2);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_uint(portArrayEncoder, this->value);
+  cbor_encoder_close_container_checked(encoder, portArrayEncoder);
+  delete portArrayEncoder;
+  return true;
+}
+
 bool PortFloat::serialize(CborEncoder* encoder) const {
   CborEncoder* portArrayEncoder = new CborEncoder();
   uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
@@ -188,5 +200,17 @@ bool PortSubTreeSpecial::serialize(CborEncoder* encoder) const {
   //for the value of an AnyTypeAllowed port, we need to encode both the type information and the actual value, the type is included as string, the data as a binary blob
   //cbor_encode_text_string(encoder, this->value.first.c_str(), this->value.first.size());
   //cbor_encode_byte_string(encoder, this->value.second.data(), this->value.second.size());
+  return true;
+}
+
+bool PortInvalid::serialize(CborEncoder* encoder) const {
+  // Encode as an array: [error_string, port_index], this is deliberatly not starting with the int, to simplify detection during deserialization and to avoid confusion with valid ports, which always start with the port index as uint
+  CborEncoder portArrayEncoder;
+  uint8_t portArrayBuf[128];
+  cbor_encoder_init(&portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
+  cbor_encoder_create_array(encoder, &portArrayEncoder, 2);
+  cbor_encode_text_string(&portArrayEncoder, this->value.c_str(), this->value.size());
+  cbor_encode_int(&portArrayEncoder, this->getID());
+  cbor_encoder_close_container_checked(encoder, &portArrayEncoder);
   return true;
 }

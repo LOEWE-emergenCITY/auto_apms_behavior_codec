@@ -15,6 +15,7 @@ A node is encoded as a CBOR array with 3 elements, first the type code of the no
 
 ### Ports
 Each port consists of an array, the elements of which depend on the type of port. Currently all ports contain the port id (just a mapping of the ports position in the node) this can be omitted if it is known that the ports are always ordered in a specific way.
+A special "invalid" port encoding is defined, this does not have an unsiged integer as a first element, but a string with the value originally conatined in the XML file. This is a workauround for remapping.
 
 #### Special Handling of SubTree Ports
 The ports of a SubTree are not known beforehand, therefore the names of the ports are included in the encoded version and the value as string. Additionally the "_autoremap" field is included as bool.

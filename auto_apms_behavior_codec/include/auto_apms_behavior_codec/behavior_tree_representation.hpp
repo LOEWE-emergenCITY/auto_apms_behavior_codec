@@ -36,6 +36,19 @@ struct PortInt : public Port {
   int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
 };
 
+struct PortUInt : public Port {
+  explicit PortUInt(uint32_t v, int16_t id) : value(v), id(id) {}
+  uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "UInt"; }
+
+  uint32_t value;
+
+  bool serialize(CborEncoder* encoder) const override;
+  private:
+  int16_t id;
+};
+
 struct PortFloat : public Port {
   explicit PortFloat(float v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
@@ -124,6 +137,16 @@ struct PortSubTreeSpecial : public Port {
   bool serialize(CborEncoder* encoder) const override;
   private:
   int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+};
+
+struct PortInvalid : public Port {
+  explicit PortInvalid(const std::string& v, int16_t id) : value(v), id(id) {}
+  uint16_t getID() const override { return this->id; }
+  std::string getType() const override { return "Invalid"; }
+  std::string value;
+  bool serialize(CborEncoder* encoder) const override;
+private:
+  int16_t id;
 };
 
 struct Node {
