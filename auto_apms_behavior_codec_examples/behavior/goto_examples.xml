@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4"
+  >
+  <BehaviorTree ID="GoToAbsolute">
+    <Sequence>
+      <PublishGoToPosition x="{z}"
+                           y="{y}"
+                           z="{z}"
+                           frame_id="map"
+                           use_degrees="false"
+                           drone="{drone}"
+                           yaw="0.000000"/>
+      <Sleep name="TODO"
+             msec="2000"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="PatrolOnce">
+    <Sequence>
+      <SubTree ID="GoToAbsolute"
+               x="1.0"
+               y="0.0"
+               z="{z}"
+               drone="{drone}"/>
+      <SubTree ID="GoToAbsolute"
+               x="1.0"
+               y="1.0"
+               z="{z}"
+               drone="{drone}"/>
+      <SubTree ID="GoToAbsolute"
+               x="-1.0"
+               y="1.0"
+               z="{z}"
+               drone="{drone}"/>
+      <SubTree ID="GoToAbsolute"
+               x="-1.0"
+               y="0.0"
+               z="{z}"
+               drone="{drone}"/>
+      <SubTree ID="GoToAbsolute"
+               x="0.0"
+               y="0.0"
+               z="{z}"
+               drone="{drone}"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="TakeoffToHeight">
+    <SubTree ID="GoToAbsolute"
+             x="0.0"
+             y="0.0"
+             z="{z}"
+             drone="{drone}"/>
+  </BehaviorTree>
+
+  <!-- Description of Node Models (used by Groot) -->
+  <TreeNodesModel>
+    <SubTree ID="GoToAbsolute"
+             editable="true">
+      <input_port name="x"
+                  default="0.0"/>
+      <input_port name="y"
+                  default="0.0"/>
+      <input_port name="z"
+                  default="0.0"/>
+      <input_port name="drone"
+                  default="&apos;drone0&apos;"/>
+    </SubTree>
+    <Condition ID="PublishGoToPosition">
+      <input_port name="x"
+                  default="0.000000"
+                  type="double">Target x position in meters.</input_port>
+      <input_port name="y"
+                  default="0.000000"
+                  type="double">Target y position in meters.</input_port>
+      <input_port name="z"
+                  default="0.000000"
+                  type="double">Target z position in meters.</input_port>
+      <input_port name="frame_id"
+                  default="map"
+                  type="std::string">Frame ID for the pose.</input_port>
+      <input_port name="use_degrees"
+                  default="false"
+                  type="bool">If true, interpret roll, pitch, yaw as degrees instead of radians.</input_port>
+      <input_port name="drone"
+                  type="std::string">Name of the target drone.</input_port>
+      <input_port name="yaw"
+                  default="0.000000"
+                  type="double">Target yaw angle in radians (or degrees if use_degrees is true).</input_port>
+    </Condition>
+  </TreeNodesModel>
+
+</root>
