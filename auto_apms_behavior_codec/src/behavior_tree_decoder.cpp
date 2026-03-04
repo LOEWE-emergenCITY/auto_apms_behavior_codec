@@ -62,8 +62,19 @@ std::map<std::string, std::string> get_port_map(
     if (port_id < dict_node.port_types.size()) {
       port_name = dict_node.port_types[port_id].name;
       RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u maps to name '%s' for node '%s'", port_id, port_name.c_str(), node.type_name.c_str());
+    } else if (node.type_name == "SubTree") {
+      // SubTree has no dictionary entry; PortBool at any id is the _autoremap flag
+      if (std::dynamic_pointer_cast<behavior_tree_representation::PortBool>(port)) {
+        port_name = "_autoremap";
+      } else if (auto port_subtree = std::dynamic_pointer_cast<behavior_tree_representation::PortSubTreeSpecial>(port)) {
+        // PortSubTreeSpecial carries its own name, handled below
+        port_name = port_subtree->name;
+      } else {
+        RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "SubTree port ID %u out of range and not a known SubTree port type", port_id);
+        continue;
+      }
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u out of range for node '%s' (has %zu ports), disregard this warning for SubTrees", port_id, node.type_name.c_str(), dict_node.port_types.size());
+      RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Port ID %u out of range for node '%s' (has %zu ports)", port_id, node.type_name.c_str(), dict_node.port_types.size());
       continue;
     }
     
@@ -107,24 +118,14 @@ auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstructi
   std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager)
 {
   RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Constructing node '%s'", node.type_name.c_str());
-  if(node.type_name != "SubTree"){
-    // add ports to the node element - bypass model validation by setting attributes directly
-    auto port_map = get_port_map(node, dictionary_manager);
-    auto xml_element = base_node.getXMLElement();
-    for (const auto& [port_name, port_value] : port_map) {
-      xml_element->SetAttribute(port_name.c_str(), port_value.c_str());
-      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Set port attribute '%s'='%s' on node '%s'", port_name.c_str(), port_value.c_str(), node.type_name.c_str());
-    }
-  }
-  else{
-    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Node '%s' is a SubTree, Handeling Ports Specially...", node.type_name.c_str());
-    auto port_map = get_port_map(node, dictionary_manager);
-    // Wrap blackboard remapping values in curly brackets
-    std::map<std::string, std::string> blackboard_remapping;
-    for (const auto& [key, value] : port_map) {
-      blackboard_remapping[key] = "{" + value + "}";
-    }
-    static_cast<auto_apms_behavior_tree::model::SubTree&>(base_node).setBlackboardRemapping(blackboard_remapping);
+  // Set all port attributes directly on the XML element for all node types.
+  // For SubTree nodes, values are already in their correct form (blackboard refs like "{z}" are already
+  // stored as-is by the encoder; literal values like "1.0" should not be wrapped in {}).
+  auto port_map = get_port_map(node, dictionary_manager);
+  auto xml_element = base_node.getXMLElement();
+  for (const auto& [port_name, port_value] : port_map) {
+    xml_element->SetAttribute(port_name.c_str(), port_value.c_str());
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Set port attribute '%s'='%s' on node '%s'", port_name.c_str(), port_value.c_str(), node.type_name.c_str());
   }
 
   // recursively construct child nodes
