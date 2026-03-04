@@ -14,6 +14,8 @@ void Node::print() const{
       std::cout << port_float->value << " (float)" << std::endl;
     } else if (auto port_bool = dynamic_cast<PortBool*>(port.get())) {
       std::cout << (port_bool->value ? "true" : "false") << " (bool)" << std::endl;
+    } else if (auto port_double = dynamic_cast<PortDouble*>(port.get())) {
+      std::cout << port_double->value << " (double)" << std::endl;
     } else if (auto port_string = dynamic_cast<PortString*>(port.get())) {
       std::cout << port_string->value << " (string)" << std::endl;
     } else if (auto port_any = dynamic_cast<PortAnyTypeAllowed*>(port.get())) {

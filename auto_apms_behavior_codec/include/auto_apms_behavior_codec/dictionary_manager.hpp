@@ -8,7 +8,7 @@
 namespace auto_apms_behavior_codec
 {
   //set to lookup supported types when analysing port infos
-  static std::set<std::string> supported_parameter_types_ = {"int", "float", "std::string", "bool", "BT::AnyTypeAllowed"};
+  static std::set<std::string> supported_parameter_types_ = {"int", "float", "double", "std::string", "bool", "BT::AnyTypeAllowed"};
 
   //each node can have multiple ports, this struct represents the name and type of a port for a node in the dictionary
   //the id of the port is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes

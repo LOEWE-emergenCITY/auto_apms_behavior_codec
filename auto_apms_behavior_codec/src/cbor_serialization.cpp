@@ -118,6 +118,19 @@ bool PortFloat::serialize(CborEncoder* encoder) const {
   return true;
 }
 
+bool PortDouble::serialize(CborEncoder* encoder) const {
+  CborEncoder* portArrayEncoder = new CborEncoder();
+  uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
+  cbor_encoder_create_array(encoder, portArrayEncoder, 2);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_double(portArrayEncoder, this->value);
+  cbor_encoder_close_container_checked(encoder, portArrayEncoder);
+  delete[] portArrayBuf;
+  delete portArrayEncoder;
+  return true;
+}
+
 bool PortBool::serialize(CborEncoder* encoder) const {
   CborEncoder* portArrayEncoder = new CborEncoder();
   uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array

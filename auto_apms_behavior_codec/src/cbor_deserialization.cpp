@@ -151,7 +151,14 @@ static bool parse_node(CborValue* nodeVal, std::shared_ptr<auto_apms_behavior_co
       }
       out_node.ports.push_back(std::make_shared<PortFloat>(static_cast<float>(dv), static_cast<int16_t>(portId)));
     }
-    
+    else if(portType == "double"){
+      double dv = 0.0;
+      if(cbor_value_get_double(&portIt, &dv) != CborNoError){
+        std::cerr << "Failed to read double port value" << std::endl;
+        return false;
+      }
+      out_node.ports.push_back(std::make_shared<PortDouble>(dv, static_cast<int16_t>(portId)));
+    }
     else if(portType == "std::string"){
       size_t svalLen = 0;
       if(cbor_value_get_string_length(&portIt, &svalLen) != CborNoError){

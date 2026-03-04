@@ -50,6 +50,20 @@ struct PortFloat : public Port {
   int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
 };
 
+struct PortDouble : public Port {
+  explicit PortDouble(double v, int16_t id) : value(v), id(id) {}
+  uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "Double";};
+
+  double value;
+
+  //serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder* encoder) const override;
+  private:
+  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+};
+
 struct PortString : public Port {
   explicit PortString(const std::string& v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
