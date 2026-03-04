@@ -270,7 +270,7 @@ static bool parse_node(CborValue* nodeVal, std::shared_ptr<auto_apms_behavior_co
   return true;
 }
 
-bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager){
+bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) {
   CborParser parser;
   CborValue it;
   if(cbor_parser_init(data.data(), data.size(), 0, &parser, &it) != CborNoError){
@@ -283,37 +283,56 @@ bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<aut
     return false;
   }
 
-  size_t treesCount = 0;
-  if(cbor_value_get_array_length(&it, &treesCount) != CborNoError){
-    std::cerr << "Failed to get trees array length" << std::endl;
+  size_t topArrayLen = 0;
+  if(cbor_value_get_array_length(&it, &topArrayLen) != CborNoError){
+    std::cerr << "Failed to get top-level array length" << std::endl;
+    return false;
+  }
+  if(topArrayLen < 1){
+    std::cerr << "Top-level array must have at least one element (the boolean)" << std::endl;
     return false;
   }
 
-  CborValue treesIt;
-  if(cbor_value_enter_container(&it, &treesIt) != CborNoError){
-    std::cerr << "Failed to enter trees array" << std::endl;
+  CborValue arrIt;
+  if(cbor_value_enter_container(&it, &arrIt) != CborNoError){
+    std::cerr << "Failed to enter top-level array" << std::endl;
     return false;
   }
 
-  
-  for(size_t ti = 0; ti < treesCount; ++ti){
-    // each tree is an array [name, root]
-    if(!cbor_value_is_array(&treesIt)){
+  // First element: boolean
+  bool was_main_tree_empty_cbor = false;
+  if(!cbor_value_is_boolean(&arrIt)){
+    std::cerr << "Expected boolean as first element in CBOR array" << std::endl;
+    return false;
+  }
+  if(cbor_value_get_boolean(&arrIt, &was_main_tree_empty_cbor) != CborNoError){
+    std::cerr << "Failed to read first boolean (was_main_tree_empty_cbor)" << std::endl;
+    return false;
+  }
+  std::cout << "Decoded CBOR: was_main_tree_empty = " << was_main_tree_empty_cbor << std::endl;
+
+  // Advance to the first tree
+  if(cbor_value_advance(&arrIt) != CborNoError){
+    std::cerr << "Failed to advance to first tree after boolean" << std::endl;
+    return false;
+  }
+
+  // Now decode each tree (remaining elements)
+  for(size_t ti = 1; ti < topArrayLen; ++ti){
+    if(!cbor_value_is_array(&arrIt)){
       std::cerr << "Tree element is not an array" << std::endl;
       return false;
     }
     size_t treeLen = 0;
-    if(cbor_value_get_array_length(&treesIt, &treeLen) != CborNoError){
+    if(cbor_value_get_array_length(&arrIt, &treeLen) != CborNoError){
       std::cerr << "Failed to get tree array length" << std::endl;
       return false;
     }
-
     CborValue treeIt;
-    if(cbor_value_enter_container(&treesIt, &treeIt) != CborNoError){
+    if(cbor_value_enter_container(&arrIt, &treeIt) != CborNoError){
       std::cerr << "Failed to enter tree array" << std::endl;
       return false;
     }
-
     // read name
     size_t nameLen = 0;
     if(cbor_value_get_string_length(&treeIt, &nameLen) != CborNoError){
@@ -326,26 +345,21 @@ bool Document::deserialize(const std::vector<uint8_t>& data, std::shared_ptr<aut
       std::cerr << "Failed to read tree name" << std::endl;
       return false;
     }
-
     Tree t;
     t.name = treeName;
-
     // next element is root node; parse_node will consume the node element and advance treeIt
     if(!parse_node(&treeIt, dictionary_manager, t.root)){
       std::cerr << "Failed to parse root node" << std::endl;
       return false;
     }
-
-    // leave tree array to advance treesIt
-    if(cbor_value_leave_container(&treesIt, &treeIt) != CborNoError){
+    // leave tree array to advance arrIt
+    if(cbor_value_leave_container(&arrIt, &treeIt) != CborNoError){
       std::cerr << "Failed to leave tree array" << std::endl;
       return false;
     }
-
     trees.push_back(t);
-
     // the first tree in the serialized document is always the main tree to execute
-    if(ti == 0){
+    if(ti == 1){
       main_tree_to_execute = treeName;
     }
   }

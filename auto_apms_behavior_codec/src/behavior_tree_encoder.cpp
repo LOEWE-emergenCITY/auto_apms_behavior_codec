@@ -172,8 +172,17 @@ bool BehaviorTreeEncoder::readTreeDefinitionFromDocument(auto_apms_behavior_tree
     }
     
     // Set the main tree to execute
-    std::string root_tree_name = tree_doc.getRootTreeName();
-    document_out->main_tree_to_execute = root_tree_name;
+    std::string root_tree_name;
+    try{
+      root_tree_name = tree_doc.getRootTreeName();
+      document_out->main_tree_to_execute = root_tree_name;
+    }
+    catch(const std::exception& e){
+      RCLCPP_WARN(this->get_logger(), "Failed to get root tree name from document: %s. Setting main_tree_to_execute to empty string.", e.what());
+      root_tree_name = "";
+      document_out->main_tree_to_execute = root_tree_name;
+    }
+    
 
     // reorder trees in document in order to ensure the main tree to execute comes first, this simplyfies encoding
     if(!root_tree_name.empty()){

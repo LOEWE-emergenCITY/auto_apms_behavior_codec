@@ -5,7 +5,7 @@ Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air missio
 ## Message Fromat
 The current approach for message encoding is the following:
 ### Document
-The document object is encoded as a CBOR array with an element per tree. The first contained tree is the main tree to execute.
+The document object is encoded as a CBOR array with an element per tree and a boolean as its first element. The first contained tree is the main tree to execute, except if the boolean is true, in this case no "main_tree_to_execute" is specified.
 
 ### Behavior Tree
 A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potential room for improvement could be using as short as possible tree names.

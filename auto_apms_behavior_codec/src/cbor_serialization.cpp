@@ -8,25 +8,23 @@ std::vector<uint8_t> Document::serialize(std::shared_ptr<auto_apms_behavior_code
   uint8_t buf[1024];  // allocate a large enough buffer
   cbor_encoder_init(encoder, buf, sizeof(buf), 0);
 
-  CborEncoder* arrayEncoder = new CborEncoder();
-  uint8_t arrayBuf[1024];  // allocate a large enough buffer for the array
-  cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
-
-  //create array of trees, the main tree to execute comes first
-  cbor_encoder_create_array(encoder, arrayEncoder, trees.size());
-  for(Tree tree : trees){
-
-    //the trees serialize function encodes the tree onto a given encoder
-    tree.serialize(arrayEncoder, dictionary_manager);
+  // Top-level array: [was_main_tree_empty, tree1, tree2, ...]
+  size_t topArraySize = 1 + trees.size();
+  CborEncoder topArrayEncoder;
+  cbor_encoder_create_array(encoder, &topArrayEncoder, topArraySize);
+  bool was_main_tree_empty = main_tree_to_execute.empty();
+  cbor_encode_boolean(&topArrayEncoder, was_main_tree_empty);
+  std::cout << "Serializing Document: main_tree_to_execute is " << (was_main_tree_empty ? "empty" : main_tree_to_execute) << std::endl;
+  for(const Tree& tree : trees){
+    tree.serialize(&topArrayEncoder, dictionary_manager);
   }
-  // close the trees array
-  cbor_encoder_close_container_checked(encoder, arrayEncoder);
+  // close the top-level array
+  cbor_encoder_close_container_checked(encoder, &topArrayEncoder);
 
   size_t cborSize = cbor_encoder_get_buffer_size(encoder, buf);
   std::cout << "CBOR encoded data size: " << cborSize << " bytes" << std::endl;
   std::vector<uint8_t> result(buf, buf + cborSize);
   delete encoder;
-  delete arrayEncoder;
 
   return result;
 }
