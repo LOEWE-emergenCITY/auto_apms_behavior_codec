@@ -6,7 +6,8 @@ Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air missio
 For encoding the behavior trees a dictionary is build from all available node maniftests. This is done by the [DictionaryManager](auto_apms_behavior_codec/include/auto_apms_behavior_codec/dictionary_manager.hpp). It creates a mapping from node names to numeric IDs.
 It also offers a function to get a merged manifest of all manifests which were used to build the dictionary, or a Vector of the individual manifests. This is used to register the node types with the `TreeDocument` during encoding and decoding.
 
-[!WARNING] It is very important that the dictionary used for decoding and encoding is equivalent. To ensure this, make sure that the same node manifests are registered in the Workspace. Currently there is no mechanism to check decodeing correctness, this should be added in the future.
+[!WARNING] 
+It is very important that the dictionary used for decoding and encoding is equivalent. To ensure this, make sure that the same node manifests are registered in the Workspace. Currently there is no mechanism to check decodeing correctness, this should be added in the future.
 
 ## Execution Flow
 ### Encoding
