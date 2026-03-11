@@ -2,7 +2,28 @@
 
 Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air mission updates.
 
-## Message Fromat
+## Dictionary
+For encoding the behavior trees a dictionary is build from all available node maniftests. This is done by the [DictionaryManager](auto_apms_behavior_codec/include/auto_apms_behavior_codec/dictionary_manager.hpp). It creates a mapping from node names to numeric IDs.
+It also offers a function to get a merged manifest of all manifests which were used to build the dictionary.
+
+## Execution Flow
+### Encoding
+The encoding process is as follows:
+1. The XML representation of the behavior tree is received from the input topic and read into an `auto_apms_behavior_tree::core::TreeDocument` using the Api provided by the `auto_apms_behavior_tree` package. The node manifest returned by the `DictionaryManager` is registered with this `TreeDocument`.
+2. The `TreeDocument` is then tranfered into an internal represetnation for easier encoding, see (/auto_apms_behavior_codec/include/auto_apms_behavior_codec/internal_representation.hpp).
+3. The internal representation is then encoded into a byte array using CBOR. And send to the output topic.
+
+Input and output topics are parameters of the constructor of the encoder node, currently they are hardcoded in the `main` function of the `behavior_tree_encoder_node.cpp`.
+
+### Decoding
+The decoding process is the opposite of the encoding process:
+1. The encoded byte array is received from the input topic and decoded into the internal representation.
+2. The internal representation is then transformed into a `TreeDocument` object, again using the Api provided by the `auto_apms_behavior_tree` package. The node manifest returned by the `DictionaryManager` is registered with this `TreeDocument`.
+3. The `TreeDocument` is then converted back into an XML representation and published on the output topic.
+
+Input and output topics are parameters of the constructor of the decoder node, currently they are hardcoded in the `main` function of the `behavior_tree_decoder_node.cpp`.
+
+## Encoding Format
 The current approach for message encoding is the following:
 ### Document
 The document object is encoded as a CBOR array with an element per tree and a boolean as its first element. The first contained tree is the main tree to execute, except if the boolean is true, in this case no "main_tree_to_execute" is specified.
@@ -26,7 +47,7 @@ Currently the encoding is functional, exept for handling of SubTrees. The [examp
 
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
-## Project Structure
+## ROS nodes
 The package contains two ROS node, one for encoding and one for decoding. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic. The decoder does the opposite, it subscribes to the encoded version and publishes the XML representation.
 
 The encoder can, for example be run with:
