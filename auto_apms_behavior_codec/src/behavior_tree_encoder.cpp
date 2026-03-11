@@ -231,7 +231,7 @@ int main(int argc, char * argv[])
   auto dict = std::make_shared<DictionaryManager>();
 
   //create the encoder, TODO: make topics configurable
-  auto node = std::make_shared<BehaviorTreeEncoder>("xml_in", "encoded_out", dict);
+  auto node = std::make_shared<BehaviorTreeEncoder>("xml_in", "serialized_tree_in", dict);
 
   /*
     // Read example XML and test readTreeDefinition

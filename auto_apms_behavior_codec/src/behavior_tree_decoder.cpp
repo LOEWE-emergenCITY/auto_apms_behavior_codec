@@ -196,8 +196,8 @@ int main(int argc, char * argv[])
   // create a fresh manager for encoding/decoding
   auto dict = std::make_shared<DictionaryManager>();
 
-  //create the encoder, TODO: make topics configurable, currently this subscribes to the Encode out topic of the encoder
-  auto node = std::make_shared<BehaviorTreeDecoder>("encoded_out", "xml_out", dict);
+  //create the encoder, TODO: make topics configurable, currently this subscribes to the serialized tree output of the lora bridge
+  auto node = std::make_shared<BehaviorTreeDecoder>("serialized_tree_out", "xml_out", dict);
   
   rclcpp::spin(node);
 
