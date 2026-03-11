@@ -68,7 +68,7 @@ Data can be sent to the xml input of the encoder with:
 
 From a file this could look like:
 
-    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml)'}"
+    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/goto_examples.xml )'}"
 
 
 # Information about LoRa throughput
