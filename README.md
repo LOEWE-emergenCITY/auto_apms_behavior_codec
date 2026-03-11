@@ -4,7 +4,9 @@ Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air missio
 
 ## Dictionary
 For encoding the behavior trees a dictionary is build from all available node maniftests. This is done by the [DictionaryManager](auto_apms_behavior_codec/include/auto_apms_behavior_codec/dictionary_manager.hpp). It creates a mapping from node names to numeric IDs.
-It also offers a function to get a merged manifest of all manifests which were used to build the dictionary.
+It also offers a function to get a merged manifest of all manifests which were used to build the dictionary, or a Vector of the individual manifests. This is used to register the node types with the `TreeDocument` during encoding and decoding.
+
+[!WARNING] It is very important that the dictionary used for decoding and encoding is equivalent. To ensure this, make sure that the same node manifests are registered in the Workspace. Currently there is no mechanism to check decodeing correctness, this should be added in the future.
 
 ## Execution Flow
 ### Encoding
@@ -66,7 +68,7 @@ Data can be sent to the xml input of the encoder with:
 
 From a file this could look like:
 
-    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml)'}"
+    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/goto_examples.xml )'}"
 
 
 # Information about LoRa throughput
