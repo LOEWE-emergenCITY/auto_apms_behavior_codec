@@ -1,0 +1,9 @@
+PublishGoToPosition:
+  description: Publishes a go-to position command to the drone
+  class_name: auto_apms_behavior_tree::PublishPose
+  topic: /(input:drone)/goto_trajectory_generator/target_pose
+  port_alias:
+    topic: drone (Name of the target drone.)
+  hidden_ports:
+    - roll
+    - pitch

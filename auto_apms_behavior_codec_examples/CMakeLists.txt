@@ -8,9 +8,18 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(auto_apms_behavior_tree REQUIRED)
 
+auto_apms_behavior_tree_register_nodes(goto
+  NODE_MANIFEST behavior/node_manifest/goto_manifest.yaml
+)
+
 auto_apms_behavior_tree_register_trees(
   "behavior/hello_world.xml"
-  NODE_MANIFEST auto_apms_behavior_tree::behavior_tree_nodes
+  NODE_MANIFEST ${PROJECT_NAME}::goto
+)
+
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

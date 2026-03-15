@@ -2,23 +2,29 @@
 #include "rclcpp/rclcpp.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 #include "auto_apms_behavior_tree_core/node/node_model_type.hpp"
-#include "auto_apms_behavior_codec/dictionary_manager.hpp"
 
 
 namespace auto_apms_behavior_codec
 {
 
-BehaviorTreeDecoder::BehaviorTreeDecoder(std::string encoded_in, std::string xml_out, std::shared_ptr<DictionaryManager> dictionary_manager)
-    : rclcpp::Node("behavior_tree_decoder"),
-      dictionary_manager_(dictionary_manager)
+BehaviorTreeDecoder::BehaviorTreeDecoder(const rclcpp::NodeOptions & options)
+    : rclcpp::Node("behavior_tree_decoder", options),
+      param_listener_(this)
 {
+  const auto params = param_listener_.get_params();
+
+  // Construct dictionary manager from node_manifest parameter
+  std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> manifest_ids(
+      params.node_manifest.begin(), params.node_manifest.end());
+  dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
+
   // Set up subscription for incoming encoded messages
   encoded_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(
-      encoded_in, 10, std::bind(&BehaviorTreeDecoder::encoded_in_callback, this, std::placeholders::_1));
+      params.encoded_in_topic, 10, std::bind(&BehaviorTreeDecoder::encoded_in_callback, this, std::placeholders::_1));
 
   // Set up publisher for outgoing XML messages
   xml_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
-      xml_out, 10);
+      params.xml_out_topic, 10);
 }
 
 //TODO change to TreeDocument API
@@ -186,21 +192,10 @@ void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_int
 }
 } // namespace auto_apms_behavior_codec
 
-
-using namespace auto_apms_behavior_codec;
-
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-
-  // create a fresh manager for encoding/decoding
-  auto dict = std::make_shared<DictionaryManager>();
-
-  //create the encoder, TODO: make topics configurable, currently this subscribes to the serialized tree output of the lora bridge
-  auto node = std::make_shared<BehaviorTreeDecoder>("serialized_tree_in", "xml_out", dict);
-  
-  rclcpp::spin(node);
-
+  rclcpp::spin(std::make_shared<auto_apms_behavior_codec::BehaviorTreeDecoder>());
   rclcpp::shutdown();
   return 0;
 }
