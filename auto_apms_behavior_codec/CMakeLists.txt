@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.11)
 project(auto_apms_behavior_codec)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -8,10 +8,20 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(auto_apms_behavior_tree_core REQUIRED)
 find_package(auto_apms_behavior_codec_interfaces REQUIRED)
 
-
+# Fetch tinycbor
+include(FetchContent)
+FetchContent_Declare(
+  tinycbor
+  GIT_REPOSITORY https://github.com/intel/tinycbor.git
+  GIT_TAG v7.0
+  PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_tinycbor.cmake
+)
+set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(tinycbor)
 
 # Add dictionary manager source files
 add_library(dictionary_manager
@@ -24,7 +34,7 @@ target_include_directories(dictionary_manager PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-#add behavior tree representation source files
+# add behavior tree representation source files
 add_library(behavior_tree_representation
   src/behavior_tree_representation.cpp
   src/cbor_serialization.cpp
@@ -36,10 +46,6 @@ target_include_directories(behavior_tree_representation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-
-# add tinycbor source files
-add_subdirectory(third_party/tinycbor)
-
 
 # Link dictionary manager
 target_link_libraries(dictionary_manager PUBLIC 
