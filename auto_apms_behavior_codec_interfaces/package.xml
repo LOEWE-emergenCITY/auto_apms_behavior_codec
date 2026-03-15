@@ -4,7 +4,8 @@
   <name>auto_apms_behavior_codec_interfaces</name>
   <version>0.0.0</version>
   <description>Interfaces for auto_apms_behavior_codec</description>
-  <maintainer email="mueller@fsr.tu-darmstadt.de">robin</maintainer>
+  <maintainer email="mue.robin@icloud.com">Robin Müller</maintainer>
+  <maintainer email="tim.oehlenschlaeger@stud.tu-darmstadt.de">Tim Öhlenschläger</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

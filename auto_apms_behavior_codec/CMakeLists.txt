@@ -8,13 +8,17 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(auto_apms_behavior_tree_core REQUIRED)
 find_package(auto_apms_behavior_codec_interfaces REQUIRED)
+find_package(auto_apms_interfaces REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 
 # Generate parameter headers employing https://github.com/PickNikRobotics/generate_parameter_library
 generate_parameter_library(encoder_params "config/encoder_params.yaml")
-generate_parameter_library(decoder_params "config/decoder_params.yaml")
+generate_parameter_library(decoder_base_params "config/decoder_base_params.yaml")
+generate_parameter_library(decoder_publisher_params "config/decoder_publisher_params.yaml")
+generate_parameter_library(decoder_executor_client_params "config/decoder_executor_client_params.yaml")
 
 # Fetch tinycbor
 include(FetchContent)
@@ -65,23 +69,47 @@ target_link_libraries(behavior_tree_encoder_node PRIVATE
   encoder_params
 )
 
-# Decoder executable
-add_executable(behavior_tree_decoder_node src/behavior_tree_decoder.cpp)
-target_include_directories(behavior_tree_decoder_node PRIVATE
+# Decoder base static library
+add_library(behavior_tree_decoder_base STATIC
+  src/behavior_tree_decoder_base.cpp
+)
+target_include_directories(behavior_tree_decoder_base PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(behavior_tree_decoder_node PRIVATE
+target_link_libraries(behavior_tree_decoder_base PUBLIC
   dictionary_manager
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
   behavior_tree_representation
   ${auto_apms_behavior_codec_interfaces_TARGETS}
-  decoder_params
+  decoder_base_params
+)
+
+# Decoder publisher executable
+add_executable(tree_decoder_publisher_node src/tree_decoder_publisher.cpp)
+target_include_directories(tree_decoder_publisher_node PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_link_libraries(tree_decoder_publisher_node PRIVATE
+  behavior_tree_decoder_base
+  decoder_publisher_params
+)
+
+# Decoder executor client executable
+add_executable(tree_decoder_executor_client_node src/tree_decoder_executor_client.cpp)
+target_include_directories(tree_decoder_executor_client_node PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_link_libraries(tree_decoder_executor_client_node PRIVATE
+  behavior_tree_decoder_base
+  rclcpp_action::rclcpp_action
+  ${auto_apms_interfaces_TARGETS}
+  decoder_executor_client_params
 )
 
 # Install executables only
 install(
-  TARGETS behavior_tree_encoder_node
-          behavior_tree_decoder_node
+  TARGETS 
+  behavior_tree_encoder_node
+  tree_decoder_publisher_node
+  tree_decoder_executor_client_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -5,7 +5,7 @@
       - auto_apms_behavior_codec_examples::goto
 
   # Individual node parameters
-  behavior_tree_decoder:
+  tree_decoder_publisher:
     ros__parameters:
       encoded_in_topic: "serialized_tree_in"
       xml_out_topic: "xml_out"
