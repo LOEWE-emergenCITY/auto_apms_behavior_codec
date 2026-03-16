@@ -1,0 +1,1 @@
+uint8[] serialized_telemetry_message
