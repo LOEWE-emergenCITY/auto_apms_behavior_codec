@@ -29,6 +29,7 @@ add_library(behavior_tree_representation
   src/behavior_tree_representation.cpp
   src/cbor_serialization.cpp
   src/cbor_deserialization.cpp
+  src/telemetry_message_builder.cpp
 )
 
 # Add include directory for behavior_tree_representation target
