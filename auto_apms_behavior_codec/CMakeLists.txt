@@ -89,10 +89,29 @@ target_link_libraries(behavior_tree_decoder_node PRIVATE
   ${auto_apms_behavior_codec_interfaces_TARGETS}  # attempt at linking the interfaces, not working
 )
 
+
+# Add Dummy Telemetry Generator executable
+add_executable(dummy_telemetry_generator src/dummy_telemetry_generator.cpp)
+
+# Add include directory to dummy telemetry generator
+target_include_directories(dummy_telemetry_generator PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+# Link dummy telemetry generator with dependencies
+target_link_libraries(dummy_telemetry_generator
+  rclcpp::rclcpp
+  behavior_tree_representation
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
+)
+
+
+
 # Install the executables
 install(
   TARGETS behavior_tree_encoder_node
           behavior_tree_decoder_node
+          dummy_telemetry_generator
   DESTINATION lib/${PROJECT_NAME}
 )
 
