@@ -101,6 +101,13 @@ std::map<std::string, std::string> get_port_map(
       // Invalid port: value is already the blackboard key string (e.g. "{z}"), port_name from dictionary
       port_value = port_invalid->value;
       RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled Invalid port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
+    } else if (auto port_node_status = std::dynamic_pointer_cast<behavior_tree_representation::PortNodeStatus>(port)) {
+      port_value = port_node_status->string_value;
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled NodeStatus port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
+    } 
+      else if (auto port_any_bt_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAny>(port)) {
+      port_value = port_any_bt_any->value;
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled BT::Any port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
     } else {
       RCLCPP_WARN(rclcpp::get_logger("behavior_tree_decoder"), "Unknown port type in node '%s'", node.type_name.c_str());
       continue;

@@ -93,7 +93,6 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
     // Handle ports regularly based on the dictionary entry
     std::map<std::string, std::string> port_values = node_element.getPorts();
 
-    //For some reason the map returned by getPorts seems to be empty
     std::cout << "Checking Ports, expecting: " << dict_entry.port_types.size() << " ports, found: " << port_values.size() << " ports" << std::endl;
     for(const auto& port_info : dict_entry.port_types){
 
@@ -122,6 +121,12 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
           }
           else if(port_info.type == "BT::AnyTypeAllowed"){
             port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
+          }
+          else if(port_info.type == "BT::NodeStatus"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortNodeStatus>(port_value, result.ports.size());
+          } 
+          else if(port_info.type == "BT::Any"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortAny>(port_value, result.ports.size());
           }
           else {
             // Unknown type, treat as invalid

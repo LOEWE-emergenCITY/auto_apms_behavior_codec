@@ -275,6 +275,21 @@ static bool parse_node(CborValue* nodeVal, std::shared_ptr<auto_apms_behavior_co
           }
           out_node.ports.push_back(std::make_shared<PortAnyTypeAllowed>(sval, static_cast<int16_t>(portId)));
         }
+        else if(portType == "BT::Any"){
+          // The encoder always writes BT::Any as a text string; read it as such.
+          size_t svalLen = 0;
+          if(cbor_value_get_string_length(&portIt, &svalLen) != CborNoError){
+            std::cerr << "Failed to get BT::Any string length" << std::endl;
+            return false;
+          }
+          std::string sval;
+          sval.resize(svalLen);
+          if(cbor_value_copy_text_string(&portIt, &sval[0], &svalLen, &portIt) != CborNoError){
+            std::cerr << "Failed to read BT::Any string value" << std::endl;
+            return false;
+          }
+          out_node.ports.push_back(std::make_shared<PortAnyTypeAllowed>(sval, static_cast<int16_t>(portId)));
+        }
         else if(portType == "bool"){
           bool bv = false;
           if(cbor_value_get_boolean(&portIt, &bv) != CborNoError){
@@ -286,6 +301,18 @@ static bool parse_node(CborValue* nodeVal, std::shared_ptr<auto_apms_behavior_co
             return false;
           }
           out_node.ports.push_back(std::make_shared<PortBool>(bv, static_cast<int16_t>(portId)));
+        }
+        else if(portType == "BT::NodeStatus"){
+          uint64_t value = 10; //initialize invalid
+          if(cbor_value_get_uint64(&portIt, &value) != CborNoError){
+            std::cerr << "Failed to read NodeStatus port value" << std::endl;
+            return false;
+          }
+          if(cbor_value_advance(&portIt) != CborNoError){
+            std::cerr << "Failed to advance after NodeStatus port value" << std::endl;
+            return false;
+          }
+          out_node.ports.push_back(std::make_shared<PortNodeStatus>(PortNodeStatus::getEnumString(static_cast<BT::NodeStatus>(value)), static_cast<int16_t>(portId)));
         }
         else {
           // unknown type - try reading as text string, otherwise skip

@@ -185,6 +185,34 @@ bool PortAnyTypeAllowed::serialize(CborEncoder* encoder) const {
   return true;
 }
 
+bool PortAny::serialize(CborEncoder* encoder) const {
+  CborEncoder* portArrayEncoder = new CborEncoder();
+  uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
+  cbor_encoder_create_array(encoder, portArrayEncoder, 2);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_text_string(portArrayEncoder, this->value.c_str(),this->value.size());
+  cbor_encoder_close_container_checked(encoder, portArrayEncoder);
+  delete[] portArrayBuf;
+  delete portArrayEncoder;
+  //for the value of an BT::Any port, we need to encode both the type information and the actual value, the type is included as string, the data as a binary blob
+  //cbor_encode_text_string(encoder, this->value.first.c_str(), this->value.first.size());
+  //cbor_encode_byte_string(encoder, this->value.second.data(), this->value.second.size());
+  return true;
+}
+
+bool PortNodeStatus::serialize(CborEncoder* encoder) const {
+  CborEncoder* portArrayEncoder = new CborEncoder();
+  uint8_t* portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
+  cbor_encoder_create_array(encoder, portArrayEncoder, 2);
+  cbor_encode_uint(portArrayEncoder, this->getID());
+  cbor_encode_uint(portArrayEncoder, (uint64_t)this->value);
+  cbor_encoder_close_container_checked(encoder, portArrayEncoder);
+  delete[] portArrayBuf;
+  delete portArrayEncoder;
+  return true;
+}
 
 bool PortSubTreeSpecial::serialize(CborEncoder* encoder) const {
   CborEncoder* portArrayEncoder = new CborEncoder();
