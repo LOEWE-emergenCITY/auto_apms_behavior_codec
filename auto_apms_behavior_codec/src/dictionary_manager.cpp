@@ -8,7 +8,7 @@
 
 using namespace auto_apms_behavior_codec;
 
-bool DictionaryManager::build_dictionary()
+bool DictionaryManager::build_dictionary(const std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> & manifest_ids)
 {
 
   // iterate through all node ids and get their models
@@ -16,8 +16,7 @@ bool DictionaryManager::build_dictionary()
   uint16_t unsupported_nodes = 0;
 
   // getting native nodes seems to be required seperately, do this first
-  auto_apms_behavior_tree::core::TreeDocument doc;
-  auto_apms_behavior_tree::NodeModelMap nodeModels = doc.getNodeModel(true);
+  auto_apms_behavior_tree::NodeModelMap nodeModels = auto_apms_behavior_tree::core::getNativeNodeModel();
   RCLCPP_INFO(rclcpp::get_logger("DictionaryManager"), "Found %zu native nodes.", nodeModels.size());
 
   //iterrate trough native nodes and add them to dictionary
@@ -56,19 +55,16 @@ bool DictionaryManager::build_dictionary()
 
   //now handle non native nodes
 
-  // begin by getting all known node types from the core
-  std::set<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> known_node_manifests = auto_apms_behavior_tree::core::getNodeManifestResourceIdentities();
-
-  std::cout << "Building dictionary from " << known_node_manifests.size() << " known node manifests." << std::endl;
+  std::cout << "Building dictionary from " << manifest_ids.size() << " node manifests." << std::endl;
 
 
-  for (const auto & node_id : known_node_manifests) {
+  for (const auto & manifest_id : manifest_ids) {
 
     try {
       //get node manifest resource for id
-      auto_apms_behavior_tree::core::NodeManifestResource manifest_resource = auto_apms_behavior_tree::core::NodeManifestResource(node_id);
+      auto_apms_behavior_tree::core::NodeManifestResource manifest_resource = auto_apms_behavior_tree::core::NodeManifestResource(manifest_id);
 
-      this->manifests.push_back(auto_apms_behavior_tree::core::NodeManifest::fromResource(node_id));
+      this->manifests.push_back(manifest_resource.getNodeManifest());
       
       // get node models from manifest
       auto node_models = manifest_resource.getNodeModel();
@@ -115,11 +111,17 @@ bool DictionaryManager::build_dictionary()
   return false;
 }
 
-DictionaryManager::DictionaryManager()
+DictionaryManager::DictionaryManager(const std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> & manifest_ids)
 {
   //constructor must build the dictionary
   RCLCPP_INFO(rclcpp::get_logger("DictionaryManager"), "Initializing DictionaryManager and building dictionary...");
-  build_dictionary();
+  if (manifest_ids.empty()) {
+    std::set<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> all_registered_manifests = auto_apms_behavior_tree::core::getNodeManifestResourceIdentities();
+    build_dictionary(std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity>(all_registered_manifests.begin(), all_registered_manifests.end()));
+  }
+  else {
+    build_dictionary(manifest_ids);
+  }
 }
 
 DictionaryNode DictionaryManager::get_dictionary_info_by_name(const std::string& dictionary_name)
