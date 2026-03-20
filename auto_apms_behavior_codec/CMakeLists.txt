@@ -31,11 +31,12 @@ FetchContent_Declare(
 set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(tinycbor)
 
-# Internal static libraries (not installed)
-add_library(behavior_tree_representation STATIC
+# Add behavior tree representation source files
+add_library(behavior_tree_representation
   src/behavior_tree_representation.cpp
   src/cbor_serialization.cpp
   src/cbor_deserialization.cpp
+  src/telemetry_message_builder.cpp
 )
 target_include_directories(behavior_tree_representation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
@@ -45,6 +46,7 @@ target_link_libraries(behavior_tree_representation PUBLIC
   ${auto_apms_behavior_codec_interfaces_TARGETS}
 )
 
+# Add dictionary manager source files
 add_library(dictionary_manager STATIC
   src/dictionary_manager.cpp
 )

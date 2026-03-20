@@ -27,7 +27,7 @@ void BehaviorTreeDecoderBase::setupDecoder()
   dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
 
   encoded_subscription_ =
-    this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(
+    this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
       params.encoded_in_topic, 10,
       std::bind(&BehaviorTreeDecoderBase::encodedInCallback, this, std::placeholders::_1));
 }
@@ -117,8 +117,7 @@ static std::map<std::string, std::string> get_port_map(
       port_name = port_subtree->name;
       port_value = port_subtree->value;
       RCLCPP_DEBUG(
-        rclcpp::get_logger("behavior_tree_decoder"),
-        "Handled SubTreeSpecial port: name='%s', value='%s'",
+        rclcpp::get_logger("behavior_tree_decoder"), "Handled SubTreeSpecial port: name='%s', value='%s'",
         port_subtree->name.c_str(), port_subtree->value.c_str());
     } else if (
       auto port_invalid =
@@ -129,6 +128,13 @@ static std::map<std::string, std::string> get_port_map(
         rclcpp::get_logger("behavior_tree_decoder"),
         "Handled Invalid port: name='%s', value='%s'",
         port_name.c_str(), port_value.c_str());
+        } else if (auto port_node_status = std::dynamic_pointer_cast<behavior_tree_representation::PortNodeStatus>(port)) {
+      port_value = port_node_status->string_value;
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled NodeStatus port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
+    } 
+      else if (auto port_any_bt_any = std::dynamic_pointer_cast<behavior_tree_representation::PortAny>(port)) {
+      port_value = port_any_bt_any->value;
+      RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Handled BT::Any port: name='%s', value='%s'", port_name.c_str(), port_value.c_str());
     } else {
       RCLCPP_WARN(
         rclcpp::get_logger("behavior_tree_decoder"),
@@ -231,14 +237,14 @@ BehaviorTreeDecoderBase::getTreeElementFromTree(
 }
 
 void BehaviorTreeDecoderBase::encodedInCallback(
-  const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg)
+  const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg)
 {
   RCLCPP_INFO(
     this->get_logger(),
-    "Received encoded message of size %zu bytes", msg->serialized_message.size());
+    "Received encoded message of size %zu bytes", msg->serialized_tree_message.size());
 
   behavior_tree_representation::Document document;
-  bool ok = document.deserialize(msg->serialized_message, dictionary_manager_);
+  bool ok = document.deserialize(msg->serialized_tree_message, dictionary_manager_);
 
   if (ok) {
     RCLCPP_INFO(this->get_logger(), "Successfully deserialized message into Document");

@@ -7,7 +7,7 @@
 #include "auto_apms_behavior_codec/behavior_tree_representation.hpp"
 #include "auto_apms_behavior_codec/decoder_base_params.hpp"
 #include "auto_apms_behavior_codec/dictionary_manager.hpp"
-#include "auto_apms_behavior_codec_interfaces/msg/serialized_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/serialized_tree_message.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -40,11 +40,11 @@ private:
     auto_apms_behavior_tree::core::TreeDocument & tree_doc);
 
   void encodedInCallback(
-    const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg);
+    const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg);
 
   decoder_base_params::ParamListener param_listener_;
   std::shared_ptr<DictionaryManager> dictionary_manager_;
-  rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr
+  rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>::SharedPtr
     encoded_subscription_;
 };
 

@@ -22,10 +22,12 @@ protected:
 private:
   void goalResponseCallback(GoalHandle::SharedPtr goal_handle);
   void resultCallback(const GoalHandle::WrappedResult & result);
+  void sendGoal(const std::string & xml_string);
 
   decoder_executor_client_params::ParamListener param_listener_;
   rclcpp_action::Client<StartTreeExecutor>::SharedPtr action_client_;
   GoalHandle::SharedPtr current_goal_handle_;
+  std::string pending_xml_;
 };
 
 }  // namespace auto_apms_behavior_codec

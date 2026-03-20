@@ -16,15 +16,11 @@ The encoding process is as follows:
 2. The `TreeDocument` is then tranfered into an internal represetnation for easier encoding, see (/auto_apms_behavior_codec/include/auto_apms_behavior_codec/internal_representation.hpp).
 3. The internal representation is then encoded into a byte array using CBOR. And send to the output topic.
 
-Input and output topics are parameters of the constructor of the encoder node, currently they are hardcoded in the `main` function of the `behavior_tree_encoder_node.cpp`.
-
 ### Decoding
 The decoding process is the opposite of the encoding process:
 1. The encoded byte array is received from the input topic and decoded into the internal representation.
 2. The internal representation is then transformed into a `TreeDocument` object, again using the Api provided by the `auto_apms_behavior_tree` package. The node manifest returned by the `DictionaryManager` is registered with this `TreeDocument`.
 3. The `TreeDocument` is then converted back into an XML representation and published on the output topic.
-
-Input and output topics are parameters of the constructor of the decoder node, currently they are hardcoded in the `main` function of the `behavior_tree_decoder_node.cpp`.
 
 ## Encoding Format
 The current approach for message encoding is the following:
@@ -51,25 +47,51 @@ Currently the encoding is functional, exept for handling of SubTrees. The [examp
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
 ## ROS nodes
-The package contains two ROS node, one for encoding and one for decoding. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic. The decoder does the opposite, it subscribes to the encoded version and publishes the XML representation.
+The package contains a ROS node for encoding and two decoder variants. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic.
 
-The encoder can, for example be run with:
+### Encoder
+The `behavior_tree_encoder_node` subscribes to XML behavior tree messages and publishes the CBOR-encoded version.
 
-    ros2 run auto_apms_behavior_codec behavior_tree_encoder_node
+```bash
+ros2 run auto_apms_behavior_codec behavior_tree_encoder_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+```
 
-And the decoder with:
+### Decoder Publisher
+The `tree_decoder_publisher_node` subscribes to the encoded version and publishes the reconstructed XML representation on a topic.
 
-    ros2 run auto_apms_behavior_codec behavior_tree_decoder_node
+```bash
+ros2 run auto_apms_behavior_codec tree_decoder_publisher_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+```
 
-Currently the `main` functions in the corresponding `.cpp` files must be adjusted to change the topics.
+### Decoder Executor Client
+The `tree_decoder_executor_client_node` subscribes to encoded behavior trees and, upon decoding, sends the resulting XML to AutoAPMS's `TreeExecutorNode` via the `StartTreeExecutor` action interface. Each received message cancels any currently running execution (waiting for termination) before starting the new tree.
 
-Data can be sent to the xml input of the encoder with:
+**Parameters** (in addition to the common decoder base parameters `node_manifest` and `encoded_in_topic`):
+| Parameter | Default | Description |
+|---|---|---|
+| `start_tree_executor_action_name` | `tree_executor/start` | Action name for the `StartTreeExecutor` action server |
 
-    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: 'XML_HERE'}"
+The action goal is populated with:
+- `build_request`: the decoded XML string
+- `node_manifest`: the encoded YAML of the node manifest used by the decoder's dictionary
+- `build_handler`: `auto_apms_behavior_tree::TreeFromStringBuildHandler`
 
-From a file this could look like:
+```bash
+ros2 run auto_apms_behavior_codec tree_decoder_executor_client_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+```
 
-    ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/goto_examples.xml )'}"
+### Sending data to the encoder
+
+```bash
+ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: 'XML_HERE'}"
+```
+
+From a file this could look like (make sure to have `auto_apms_ros2behavior` installed):
+
+```bash
+TREE_IDENTITY=auto_apms_behavior_codec_examples::hello_world::Main
+ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(ros2 behavior show $TREE_IDENTITY)'}"
+```
 
 
 # Information about LoRa throughput

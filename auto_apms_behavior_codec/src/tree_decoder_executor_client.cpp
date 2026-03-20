@@ -18,17 +18,24 @@ void TreeDecoderExecutorClient::onTreeDecoded(const std::string & xml_string)
     return;
   }
 
-  // Cancel any currently running goal
+  // If a goal is currently running, cancel it and defer the new goal
   if (current_goal_handle_) {
     RCLCPP_INFO(this->get_logger(), "Canceling previous goal before sending new one");
+    pending_xml_ = xml_string;
     action_client_->async_cancel_goal(current_goal_handle_);
-    current_goal_handle_ = nullptr;
+    return;
   }
 
+  sendGoal(xml_string);
+}
+
+void TreeDecoderExecutorClient::sendGoal(const std::string & xml_string)
+{
   // Send new goal with the decoded XML
   auto goal_msg = StartTreeExecutor::Goal();
   goal_msg.build_request = xml_string;
   goal_msg.node_manifest = getNodeManifest().encode();
+  goal_msg.build_handler = "auto_apms_behavior_tree::TreeFromStringBuildHandler";
 
   auto send_goal_options = rclcpp_action::Client<StartTreeExecutor>::SendGoalOptions();
   send_goal_options.goal_response_callback =
@@ -68,6 +75,17 @@ void TreeDecoderExecutorClient::resultCallback(const GoalHandle::WrappedResult &
     default:
       RCLCPP_ERROR(this->get_logger(), "Unknown result code");
       break;
+  }
+
+  // If a new tree was queued while canceling, send it now
+  if (!pending_xml_.empty()) {
+    std::string xml = std::move(pending_xml_);
+    pending_xml_.clear();
+    if (action_client_->action_server_is_ready()) {
+      sendGoal(xml);
+    } else {
+      RCLCPP_WARN(this->get_logger(), "Action server not available for pending goal");
+    }
   }
 }
 

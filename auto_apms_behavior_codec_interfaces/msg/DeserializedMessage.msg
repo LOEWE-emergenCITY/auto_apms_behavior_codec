@@ -1,1 +1,0 @@
-string deserialized_message

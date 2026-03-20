@@ -26,7 +26,7 @@ BehaviorTreeEncoder::BehaviorTreeEncoder(const rclcpp::NodeOptions & options)
     params.xml_in_topic, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
   
   // Set up publisher for encoded messages
-  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(params.encoded_out_topic, 10);
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(params.encoded_out_topic, 10);
 }
 
 void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg) {
@@ -49,8 +49,8 @@ void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfa
   std::cout << std::dec << std::endl; // Reset to decimal
 
   // create the appropriate ROS message and publish
-  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedMessage();
-  encoded_msg.serialized_message = encoded_data;
+  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage();
+  encoded_msg.serialized_tree_message = encoded_data;
   encoded_publisher_->publish(encoded_msg);
 
   RCLCPP_INFO(this->get_logger(), "Published encoded message of length %zu", encoded_data.size());
@@ -96,7 +96,6 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
     // Handle ports regularly based on the dictionary entry
     std::map<std::string, std::string> port_values = node_element.getPorts();
 
-    //For some reason the map returned by getPorts seems to be empty
     std::cout << "Checking Ports, expecting: " << dict_entry.port_types.size() << " ports, found: " << port_values.size() << " ports" << std::endl;
     for(const auto& port_info : dict_entry.port_types){
 
@@ -125,6 +124,12 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
           }
           else if(port_info.type == "BT::AnyTypeAllowed"){
             port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
+          }
+          else if(port_info.type == "BT::NodeStatus"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortNodeStatus>(port_value, result.ports.size());
+          } 
+          else if(port_info.type == "BT::Any"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortAny>(port_value, result.ports.size());
           }
           else {
             // Unknown type, treat as invalid
