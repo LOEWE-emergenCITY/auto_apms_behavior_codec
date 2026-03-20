@@ -5,6 +5,7 @@
     <Sequence>
       <SubTree ID="Print"
                msg="Hello"/>
+      <Sleep msec="3000"/>
       <SubTree ID="Print"
                msg="World"/>
     </Sequence>

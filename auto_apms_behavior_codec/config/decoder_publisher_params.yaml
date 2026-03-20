@@ -1,0 +1,6 @@
+auto_apms_behavior_codec::decoder_publisher_params:
+  xml_out_topic:
+    type: string
+    default_value: "xml_out"
+    read_only: true
+    description: Topic name for outgoing XML messages.

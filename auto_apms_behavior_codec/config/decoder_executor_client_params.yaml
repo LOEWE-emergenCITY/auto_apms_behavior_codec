@@ -1,0 +1,6 @@
+auto_apms_behavior_codec::decoder_executor_client_params:
+  start_tree_executor_action_name:
+    type: string
+    default_value: "tree_executor/start"
+    read_only: true
+    description: Action name for the StartTreeExecutor action server.

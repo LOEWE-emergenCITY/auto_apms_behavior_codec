@@ -4,15 +4,18 @@
   <name>auto_apms_behavior_codec</name>
   <version>0.0.0</version>
   <description>Efficient de-/serialization of AutoAPMS behaviors for robust over-the-air mission updates</description>
-  <maintainer email="mueller@fsr.tu-darmstadt.de">robin</maintainer>
+  <maintainer email="mue.robin@icloud.com">Robin Müller</maintainer>
+  <maintainer email="tim.oehlenschlaeger@stud.tu-darmstadt.de">Tim Öhlenschläger</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>generate_parameter_library</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
   <depend>auto_apms_behavior_tree_core</depend>
   <depend>auto_apms_behavior_codec_interfaces</depend>
+  <depend>auto_apms_interfaces</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
