@@ -9,7 +9,7 @@
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 
 #include "auto_apms_behavior_codec_interfaces/msg/tree_xml_message.hpp"
-#include "auto_apms_behavior_codec_interfaces/msg/serialized_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/serialized_tree_message.hpp"
 #include "auto_apms_behavior_codec/encoder_params.hpp"
 
 namespace auto_apms_behavior_codec
@@ -63,7 +63,7 @@ namespace auto_apms_behavior_codec
       rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>::SharedPtr xml_subscription_;
 
       //publisher for binary encoded behavior trees
-      rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr encoded_publisher_;
+      rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>::SharedPtr encoded_publisher_;
       
       // helaper function to get a behavior_tree_representation::Node from a TreeDocument::NodeElement, this is used for constructing the internal representation of the tree from the TreeDocument API
       behavior_tree_representation::Node getNodeFromElement(const auto_apms_behavior_tree::core::TreeDocument::NodeElement& node_element);

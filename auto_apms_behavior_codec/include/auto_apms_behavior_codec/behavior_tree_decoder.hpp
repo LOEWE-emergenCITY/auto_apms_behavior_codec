@@ -9,7 +9,7 @@
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
 
 #include "auto_apms_behavior_codec_interfaces/msg/tree_xml_message.hpp"
-#include "auto_apms_behavior_codec_interfaces/msg/serialized_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/serialized_tree_message.hpp"
 #include "auto_apms_behavior_codec/decoder_params.hpp"
 
 namespace auto_apms_behavior_codec
@@ -37,13 +37,13 @@ namespace auto_apms_behavior_codec
     std::shared_ptr<DictionaryManager> dictionary_manager_;
 
     //subscription for incoming encoded Trees
-    rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>::SharedPtr encoded_subscription_;
+    rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>::SharedPtr encoded_subscription_;
 
     //publisher for XML behavior trees
     rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>::SharedPtr xml_publisher_;
 
     //callback for incoming encoded messages, handles deserialization and XML reconstruction
-    void encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg);
+    void encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg);
 
   };
 }

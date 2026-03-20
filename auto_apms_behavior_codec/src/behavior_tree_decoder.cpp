@@ -19,7 +19,7 @@ BehaviorTreeDecoder::BehaviorTreeDecoder(const rclcpp::NodeOptions & options)
   dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
 
   // Set up subscription for incoming encoded messages
-  encoded_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(
+  encoded_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
       params.encoded_in_topic, 10, std::bind(&BehaviorTreeDecoder::encoded_in_callback, this, std::placeholders::_1));
 
   // Set up publisher for outgoing XML messages
@@ -169,12 +169,12 @@ auto_apms_behavior_tree::core::TreeDocument::TreeElement BehaviorTreeDecoder::ge
 
 
 //TODO, still untested
-void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedMessage::SharedPtr msg) {
-  RCLCPP_INFO(this->get_logger(), "Received encoded message of size %zu bytes", msg->serialized_message.size());
+void BehaviorTreeDecoder::encoded_in_callback(const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg) {
+  RCLCPP_INFO(this->get_logger(), "Received encoded message of size %zu bytes", msg->serialized_tree_message.size());
   
   // Deserialize the message into a Document
   behavior_tree_representation::Document document;
-  bool ok = document.deserialize(msg->serialized_message, dictionary_manager_);
+  bool ok = document.deserialize(msg->serialized_tree_message, dictionary_manager_);
   
   if (ok) {
     RCLCPP_INFO(this->get_logger(), "Successfully deserialized message into Document");

@@ -26,7 +26,7 @@ BehaviorTreeEncoder::BehaviorTreeEncoder(const rclcpp::NodeOptions & options)
     params.xml_in_topic, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
   
   // Set up publisher for encoded messages
-  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedMessage>(params.encoded_out_topic, 10);
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(params.encoded_out_topic, 10);
 }
 
 void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg) {
@@ -49,8 +49,8 @@ void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfa
   std::cout << std::dec << std::endl; // Reset to decimal
 
   // create the appropriate ROS message and publish
-  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedMessage();
-  encoded_msg.serialized_message = encoded_data;
+  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage();
+  encoded_msg.serialized_tree_message = encoded_data;
   encoded_publisher_->publish(encoded_msg);
 
   RCLCPP_INFO(this->get_logger(), "Published encoded message of length %zu", encoded_data.size());
