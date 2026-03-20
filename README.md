@@ -55,11 +55,11 @@ The package contains two ROS node, one for encoding and one for decoding. The en
 
 The encoder can, for example be run with:
 
-    ros2 run auto_apms_behavior_codec behavior_tree_encoder_node
+    ros2 run auto_apms_behavior_codec behavior_tree_encoder_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 
 And the decoder with:
 
-    ros2 run auto_apms_behavior_codec behavior_tree_decoder_node
+    ros2 run auto_apms_behavior_codec behavior_tree_decoder_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 
 Currently the `main` functions in the corresponding `.cpp` files must be adjusted to change the topics.
 

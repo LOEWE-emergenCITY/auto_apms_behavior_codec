@@ -1,29 +1,32 @@
 #include "auto_apms_behavior_codec/behavior_tree_encoder.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "auto_apms_behavior_tree_core/tree/tree_document.hpp"
-#include "auto_apms_behavior_codec/dictionary_manager.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 
 using namespace auto_apms_behavior_codec;
 
-BehaviorTreeEncoder::BehaviorTreeEncoder(std::string xml_in_topic, std::string encoded_out_topic, std::shared_ptr<DictionaryManager> dictionary_manager)
-    : rclcpp::Node("behavior_tree_encoder")
+BehaviorTreeEncoder::BehaviorTreeEncoder(const rclcpp::NodeOptions & options)
+    : rclcpp::Node("behavior_tree_encoder", options),
+      param_listener_(this)
 {
-  // Initialize the dictionary manager
-  this->dictionary_manager_ = dictionary_manager;
+  const auto params = param_listener_.get_params();
 
-  std::cout << "BehaviorTreeEncoder will use the following dictionary:" << std::endl;
+  // Construct dictionary manager from node_manifest parameter
+  std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> manifest_ids(
+      params.node_manifest.begin(), params.node_manifest.end());
+  dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
+
+  RCLCPP_INFO(this->get_logger(), "BehaviorTreeEncoder will use the following dictionary:");
   this->dictionary_manager_->print_dictionary();
 
   // Set up subscription for incoming XML messages
   xml_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
-    xml_in_topic, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
+    params.xml_in_topic, 10, std::bind(&BehaviorTreeEncoder::xml_in_callback, this, std::placeholders::_1));
   
   // Set up publisher for encoded messages
-  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(encoded_out_topic, 10);
-
+  encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(params.encoded_out_topic, 10);
 }
 
 void BehaviorTreeEncoder::xml_in_callback(const auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage::SharedPtr msg) {
@@ -93,7 +96,6 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
     // Handle ports regularly based on the dictionary entry
     std::map<std::string, std::string> port_values = node_element.getPorts();
 
-    //For some reason the map returned by getPorts seems to be empty
     std::cout << "Checking Ports, expecting: " << dict_entry.port_types.size() << " ports, found: " << port_values.size() << " ports" << std::endl;
     for(const auto& port_info : dict_entry.port_types){
 
@@ -122,6 +124,12 @@ behavior_tree_representation::Node BehaviorTreeEncoder::getNodeFromElement(const
           }
           else if(port_info.type == "BT::AnyTypeAllowed"){
             port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
+          }
+          else if(port_info.type == "BT::NodeStatus"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortNodeStatus>(port_value, result.ports.size());
+          } 
+          else if(port_info.type == "BT::Any"){
+            port_ptr = std::make_shared<behavior_tree_representation::PortAny>(port_value, result.ports.size());
           }
           else {
             // Unknown type, treat as invalid
@@ -226,32 +234,7 @@ std::vector<uint8_t> BehaviorTreeEncoder::encode(behavior_tree_representation::D
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-
-  // create a fresh manager for encoding/decoding
-  auto dict = std::make_shared<DictionaryManager>();
-
-  //create the encoder, TODO: make topics configurable
-  auto node = std::make_shared<BehaviorTreeEncoder>("xml_in", "serialized_tree_out", dict);
-
-  /*
-    // Read example XML and test readTreeDefinition
-  const std::string xml_path = "/home/hiwi/orcas-ws/src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml";
-  std::ifstream in(xml_path);
-  if (in) {
-    std::stringstream ss; ss << in.rdbuf();
-    const std::string xml = ss.str();
-    
-    std::unique_ptr<behavior_tree_representation::Document> document;
-
-    //currently readTreeDefinitionFromXML uses a hacky workaround to register some node manifest, this still needs implementation
-    bool ok = node->readTreeDefinitionFromXML(xml, document);
-
-    RCLCPP_INFO(node->get_logger(), "readTreeDefinitionFromDocument returned: %s", ok ? "true" : "false");
-
-  }
-  */
-  rclcpp::spin(node);
-
+  rclcpp::spin(std::make_shared<auto_apms_behavior_codec::BehaviorTreeEncoder>());
   rclcpp::shutdown();
   return 0;
 }

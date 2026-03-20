@@ -109,10 +109,69 @@ struct PortAnyTypeAllowed : public Port {
   explicit PortAnyTypeAllowed(std::string v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "AnyTypeAllowed";};
+  std::string getType() const override { return "BT::AnyTypeAllowed";};
 
   //just store exactly what is written in the xml
   std::string value;
+
+  //serializes the Port using a given CBOR encoder object 
+  bool serialize(CborEncoder* encoder) const override;
+  private:
+  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+};
+
+struct PortAny : public Port {
+  explicit PortAny(std::string v, int16_t id) : value(v), id(id) {}
+  uint16_t getID() const override { return this->id; }
+
+  std::string getType() const override { return "BT::Any";};
+
+  //just store exactly what is written in the xml
+  std::string value;
+
+  //serializes the Port using a given CBOR encoder object 
+  bool serialize(CborEncoder* encoder) const override;
+  private:
+  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+};
+
+struct PortNodeStatus : public Port {
+  explicit PortNodeStatus(std::string v, int16_t id) : string_value(v), id(id) {
+    // Convert string to enum
+    if (string_value == "IDLE") {
+      value = BT::NodeStatus::IDLE;
+    } else if (string_value == "RUNNING") {
+      value = BT::NodeStatus::RUNNING;
+    } else if (string_value == "SUCCESS") {
+      value = BT::NodeStatus::SUCCESS;
+    } else if (string_value == "FAILURE") {
+      value = BT::NodeStatus::FAILURE;
+    } else if (string_value == "SKIPPED") {
+      value = BT::NodeStatus::SKIPPED;
+    }
+    else {
+      std::cerr << "Warning: Unrecognized NodeStatus string '" << string_value << "'." << std::endl;
+      value = (BT::NodeStatus)10; // assign invalid value, in order to mark failure.
+    }
+  }
+  uint16_t getID() const override { return this->id; }
+
+  static std::string getEnumString(BT::NodeStatus status) {
+    switch (status) {
+      case BT::NodeStatus::IDLE: return "IDLE";
+      case BT::NodeStatus::RUNNING: return "RUNNING";
+      case BT::NodeStatus::SUCCESS: return "SUCCESS";
+      case BT::NodeStatus::FAILURE: return "FAILURE";
+      case BT::NodeStatus::SKIPPED: return "SKIPPED";
+      default: return "Error";
+    }
+  }
+
+  std::string getType() const override { return "BT::NodeStatus";};
+
+  std::string string_value; //in the3 xml the NodeStatus will be represented as string, store that here
+
+  BT::NodeStatus value; // store the string converted to the Enum from BT namespace, this is also used for transmission
 
   //serializes the Port using a given CBOR encoder object 
   bool serialize(CborEncoder* encoder) const override;

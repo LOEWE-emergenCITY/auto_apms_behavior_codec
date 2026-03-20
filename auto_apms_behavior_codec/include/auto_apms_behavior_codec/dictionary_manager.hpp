@@ -8,7 +8,7 @@
 namespace auto_apms_behavior_codec
 {
   //set to lookup supported types when analysing port infos
-  static std::set<std::string> supported_parameter_types_ = {"int", "unsigned int", "float", "double", "std::string", "bool", "BT::AnyTypeAllowed"};
+  static std::set<std::string> supported_parameter_types_ = {"int", "unsigned int", "float", "double", "std::string", "bool", "BT::AnyTypeAllowed", "BT::Any" , "BT::NodeStatus"};
 
   //each node can have multiple ports, this struct represents the name and type of a port for a node in the dictionary
   //the id of the port is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
@@ -34,7 +34,11 @@ namespace auto_apms_behavior_codec
   class DictionaryManager
   {
   public:
-      DictionaryManager();
+      /**
+       * @brief Constructor.
+       * @param manifest_ids Node manifests to use for the dictionary. If empty, will use all registered node manifests.
+       */
+      DictionaryManager(const std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> & manifest_ids = {});
       ~DictionaryManager() = default;
 
       // function to get a DictionaryNode by its ID -> required for decoding
@@ -53,7 +57,7 @@ namespace auto_apms_behavior_codec
 
     private:
       // gets known node types and builds dictionary
-      bool build_dictionary();
+      bool build_dictionary(const std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> & manifest_ids);
 
       //store dictionary entries
       std::map<std::string, DictionaryNode> dictionary_map_;

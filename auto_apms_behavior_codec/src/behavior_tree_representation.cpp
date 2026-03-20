@@ -24,6 +24,10 @@ void Node::print() const{
       std::cout << "SubTreeSpecial: " << port_subtree->name << " = " << port_subtree->value << std::endl;
     } else if (auto port_invalid = dynamic_cast<PortInvalid*>(port.get())) {
       std::cout << "Invalid: " << port_invalid->value << std::endl;
+    } else if (auto port_node_status = dynamic_cast<PortNodeStatus*>(port.get())) {
+      std::cout << "NodeStatus: " << port_node_status->string_value << " = " << port_node_status->value << std::endl;
+    } else if (auto port_any_bt_any = dynamic_cast<PortAny*>(port.get())) {
+      std::cout << "BT::Any: " << port_any_bt_any->value << std::endl;
     } else {
       std::cout << "Unknown port type" << std::endl;
     }

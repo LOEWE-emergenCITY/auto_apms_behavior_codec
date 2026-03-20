@@ -10,16 +10,16 @@
 
 #include "auto_apms_behavior_codec_interfaces/msg/tree_xml_message.hpp"
 #include "auto_apms_behavior_codec_interfaces/msg/serialized_tree_message.hpp"
+#include "auto_apms_behavior_codec/encoder_params.hpp"
 
 namespace auto_apms_behavior_codec
 {
-  // handles encoding of behavior trees into a binary format, receives XML encoded Behavior Trees on Topic passed in the constructor as "xml_in" and sends the encoded message to the topic passed as "encoded_out"
-  // encoding happens based on the dictionary passed in the constructor
+  // handles encoding of behavior trees into a binary format, receives XML encoded Behavior Trees on a configurable topic and sends the encoded message to a configurable output topic
+  // encoding happens based on the dictionary built from the node_manifest parameter
   class BehaviorTreeEncoder : public rclcpp::Node
   {
   public:
-      // constructor takes in the topic names for the XML input and the encoded output, as well as a shared pointer to a dictionary manager
-      BehaviorTreeEncoder(std::string xml_in_topic, std::string encoded_out_topic, std::shared_ptr<DictionaryManager> dictionary_manager);
+      BehaviorTreeEncoder(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
       ~BehaviorTreeEncoder() = default;
 
@@ -53,6 +53,9 @@ namespace auto_apms_behavior_codec
       
 
   private:
+      // parameter listener for generate_parameter_library
+      encoder_params::ParamListener param_listener_;
+
       // keep a reference to the dictionary for encoding
       std::shared_ptr<DictionaryManager> dictionary_manager_;
 
