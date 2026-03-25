@@ -11,7 +11,8 @@ public:
   DummyTelemetryGenerator()
   : Node("DummyTelemetryGenerator") {
     auto period_ms = 30000;
-    publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>("TelemetryOut", 10);
+    publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>("serialized_telemetry_out", 10);
+    RCLCPP_INFO(this->get_logger(), "topic: serialized_telemetry_out");
     timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&DummyTelemetryGenerator::onTimer, this));
     RCLCPP_INFO(this->get_logger(), "DummyTelemetryGenerator started with period %d ms", period_ms);
   }
