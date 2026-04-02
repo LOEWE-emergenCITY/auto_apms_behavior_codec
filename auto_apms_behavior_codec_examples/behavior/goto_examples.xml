@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4"
-  >
+      main_tree_to_execute="Test_GoTo">
   <BehaviorTree ID="GoToAbsolute">
     <Sequence>
       <PublishGoToPosition x="{z}"
@@ -45,12 +45,17 @@
     </Sequence>
   </BehaviorTree>
 
-  <BehaviorTree ID="TakeoffToHeight">
-    <SubTree ID="GoToAbsolute"
-             x="0.0"
-             y="0.0"
-             z="{z}"
-             drone="{drone}"/>
+  <BehaviorTree ID="Test_GoTo">
+    <Sequence>
+      <SubTree ID="GoToAbsolute" drone="drone0" x="0.0" y="0.0" z="3.0" _autoremap="false"/>
+      <SubTree ID="GoToAbsolute" drone="drone0" x="3.0" y="0.0" z="3.0" _autoremap="false"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="LandAtOrigin">
+    <Sequence>
+      <SubTree ID="GoToAbsolute" drone="drone0" x="0.0" y="0.0" z="0.0" _autoremap="false"/>
+    </Sequence>
   </BehaviorTree>
 
   <!-- Description of Node Models (used by Groot) -->
