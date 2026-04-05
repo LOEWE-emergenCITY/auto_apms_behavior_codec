@@ -10,12 +10,15 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(auto_apms_behavior_tree_core REQUIRED)
+find_package(auto_apms_behavior_tree REQUIRED)
 find_package(auto_apms_behavior_codec_interfaces REQUIRED)
 find_package(auto_apms_interfaces REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 
 # Generate parameter headers employing https://github.com/PickNikRobotics/generate_parameter_library
+generate_parameter_library(encoder_base_params "config/encoder_base_params.yaml")
 generate_parameter_library(encoder_subscriber_params "config/encoder_subscriber_params.yaml")
+generate_parameter_library(encoder_executor_proxy_params "config/encoder_executor_proxy_params.yaml")
 generate_parameter_library(decoder_base_params "config/decoder_base_params.yaml")
 generate_parameter_library(decoder_publisher_params "config/decoder_publisher_params.yaml")
 generate_parameter_library(decoder_executor_client_params "config/decoder_executor_client_params.yaml")
@@ -73,19 +76,54 @@ target_link_libraries(dictionary_manager PUBLIC
 # ENCODING
 #
 
-# Encoder executable
+# Encoder base static library
+add_library(behavior_tree_encoder_base STATIC
+  src/behavior_tree_encoder_base.cpp
+)
+target_include_directories(behavior_tree_encoder_base PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_link_libraries(behavior_tree_encoder_base PUBLIC
+  dictionary_manager
+  rclcpp::rclcpp
+  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
+  behavior_tree_representation
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
+  encoder_base_params
+)
+
+# Encoder subscriber executable
 add_executable(tree_encoder_subscriber 
   src/tree_encoder_subscriber.cpp
 )
 target_include_directories(tree_encoder_subscriber PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(tree_encoder_subscriber PRIVATE
-  dictionary_manager
-  rclcpp::rclcpp
-  auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
-  behavior_tree_representation
-  ${auto_apms_behavior_codec_interfaces_TARGETS}
+  behavior_tree_encoder_base
   encoder_subscriber_params
+)
+
+# Encoder executor proxy library
+add_library(tree_encoder_executor_proxy_lib STATIC
+  src/tree_encoder_executor_proxy.cpp
+)
+target_include_directories(tree_encoder_executor_proxy_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_link_libraries(tree_encoder_executor_proxy_lib PUBLIC
+  behavior_tree_encoder_base
+  ${PROJECT_NAME}
+  rclcpp_action::rclcpp_action
+  auto_apms_behavior_tree::auto_apms_behavior_tree
+  ${auto_apms_interfaces_TARGETS}
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
+  encoder_executor_proxy_params
+)
+
+# Encoder executor proxy executable
+add_executable(tree_encoder_executor_proxy
+  src/tree_encoder_executor_proxy_main.cpp
+)
+target_link_libraries(tree_encoder_executor_proxy PRIVATE
+  tree_encoder_executor_proxy_lib
 )
 
 #
@@ -158,9 +196,34 @@ ament_export_targets(
 install(
   TARGETS 
   tree_encoder_subscriber
+  tree_encoder_executor_proxy
   tree_decoder_publisher
   tree_decoder_executor_client
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  # Unit tests
+  ament_add_gtest(test_unit
+    test/test_executor_telemetry.cpp
+    test/test_executor_command.cpp
+  )
+  target_link_libraries(test_unit
+    ${PROJECT_NAME}
+    auto_apms_behavior_tree::auto_apms_behavior_tree
+  )
+  target_include_directories(test_unit PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
+  # Integration tests
+  ament_add_gtest(test_integration
+    test/test_tree_encoder_executor_proxy.cpp
+  )
+  target_link_libraries(test_integration
+    tree_encoder_executor_proxy_lib
+  )
+endif()
 
 ament_package()

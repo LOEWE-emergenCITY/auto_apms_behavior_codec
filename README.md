@@ -49,11 +49,38 @@ Using a CBOR analysis tool, such as https://cbor.me/, the structure described ab
 ## ROS nodes
 The package contains a ROS node for encoding and two decoder variants. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic.
 
-### Encoder
+### Encoder Subscriber
 The `tree_encoder_subscriber` subscribes to XML behavior tree messages and publishes the CBOR-encoded version.
 
 ```bash
 ros2 run auto_apms_behavior_codec tree_encoder_subscriber --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+```
+
+### Encoder Executor Proxy
+The `tree_encoder_executor_proxy` exposes a `StartTreeExecutor` action server — the same interface as AutoAPMS's `TreeExecutorNode` — and transparently bridges goals to a remote executor through the codec layer.
+
+When a goal is received, the proxy:
+1. **Encodes** the tree XML (if provided) and publishes it over the serialized-tree topic.
+2. **Waits** for the remote executor's telemetry to confirm the tree has been registered.
+3. **Sends** a `START` command with the entry-point tree name via the executor-command topic.
+4. **Monitors** the remote executor's telemetry until execution completes (returns to `IDLE`), then reports the result back through the action interface.
+
+If `build_request` is left empty but `entry_point` is specified, encoding is skipped and the proxy sends the `START` command directly (useful when the tree is already registered on the remote side).
+Cancellation is supported: a cancel request forwards a `CANCEL` command to the remote executor.
+
+Internally the proxy runs a periodic state machine (100 ms tick) with the states
+`IDLE → REGISTER_BEHAVIOR → COMMAND_EXECUTOR → AWAIT_RESULT → IDLE`.
+
+**Parameters** (in addition to the common encoder base parameters `node_manifest` and `encoded_out_topic`):
+
+| Parameter | Default | Description |
+|---|---|---|
+| `start_tree_executor_action_name` | `start_tree_executor` | Action server name exposed by the proxy |
+| `executor_command_topic` | `executor_command` | Topic to publish `ExecutorCommandMessage` on |
+| `telemetry_topic` | `serialized_telemetry_in` | Topic to subscribe to `SerializedTelemetryMessage` |
+
+```bash
+ros2 run auto_apms_behavior_codec tree_encoder_executor_proxy
 ```
 
 ### Decoder Publisher
@@ -80,7 +107,7 @@ The action goal is populated with:
 ros2 run auto_apms_behavior_codec tree_decoder_executor_client --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
-### Sending data to the encoder
+## Sending data to the encoder
 
 ```bash
 ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: 'XML_HERE'}"
@@ -92,7 +119,6 @@ From a file this could look like (make sure to have `auto_apms_ros2behavior` ins
 TREE_IDENTITY=auto_apms_behavior_codec_examples::hello_world::Main
 ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(ros2 behavior show $TREE_IDENTITY)'}"
 ```
-
 
 # Information about LoRa throughput
 The following is intended as a reference to judge possible lora throughput
