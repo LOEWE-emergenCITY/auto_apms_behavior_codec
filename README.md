@@ -50,21 +50,21 @@ Using a CBOR analysis tool, such as https://cbor.me/, the structure described ab
 The package contains a ROS node for encoding and two decoder variants. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic.
 
 ### Encoder
-The `behavior_tree_encoder_node` subscribes to XML behavior tree messages and publishes the CBOR-encoded version.
+The `tree_encoder_subscriber` subscribes to XML behavior tree messages and publishes the CBOR-encoded version.
 
 ```bash
-ros2 run auto_apms_behavior_codec behavior_tree_encoder_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+ros2 run auto_apms_behavior_codec tree_encoder_subscriber --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
 ### Decoder Publisher
-The `tree_decoder_publisher_node` subscribes to the encoded version and publishes the reconstructed XML representation on a topic.
+The `tree_decoder_publisher` subscribes to the encoded version and publishes the reconstructed XML representation on a topic.
 
 ```bash
-ros2 run auto_apms_behavior_codec tree_decoder_publisher_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+ros2 run auto_apms_behavior_codec tree_decoder_publisher --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
 ### Decoder Executor Client
-The `tree_decoder_executor_client_node` subscribes to encoded behavior trees and, upon decoding, sends the resulting XML to AutoAPMS's `TreeExecutorNode` via the `StartTreeExecutor` action interface. Each received message cancels any currently running execution (waiting for termination) before starting the new tree.
+The `tree_decoder_executor_client` subscribes to encoded behavior trees and, upon decoding, sends the resulting XML to AutoAPMS's `TreeExecutorNode` via the `StartTreeExecutor` action interface. Each received message cancels any currently running execution (waiting for termination) before starting the new tree.
 
 **Parameters** (in addition to the common decoder base parameters `node_manifest` and `encoded_in_topic`):
 | Parameter | Default | Description |
@@ -77,7 +77,7 @@ The action goal is populated with:
 - `build_handler`: `auto_apms_behavior_tree::TreeFromStringBuildHandler`
 
 ```bash
-ros2 run auto_apms_behavior_codec tree_decoder_executor_client_node --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+ros2 run auto_apms_behavior_codec tree_decoder_executor_client --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
 ### Sending data to the encoder

@@ -1,39 +1,47 @@
 #include "auto_apms_behavior_codec/telemetry_message_builder.hpp"
-#include "cbor.h"
+
 #include <cstring>
 #include <iostream>
 
+#include "cbor.h"
+
 using namespace auto_apms_behavior_codec;
 
-void TelemetryMessageBuilder::addIntEntry(const std::string& key, int32_t value) {
+void TelemetryMessageBuilder::addIntEntry(const std::string & key, int32_t value)
+{
   auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryInt>();
   e->key = key;
   e->value = value;
   message_.entries[key] = std::move(e);
 }
 
-void TelemetryMessageBuilder::addFloatEntry(const std::string& key, double value) {
+void TelemetryMessageBuilder::addFloatEntry(const std::string & key, double value)
+{
   auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryFloat>();
   e->key = key;
   e->value = value;
   message_.entries[key] = std::move(e);
 }
 
-void TelemetryMessageBuilder::addStringEntry(const std::string& key, const std::string& value) {
+void TelemetryMessageBuilder::addStringEntry(const std::string & key, const std::string & value)
+{
   auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryString>();
   e->key = key;
   e->value = value;
   message_.entries[key] = std::move(e);
 }
 
-void TelemetryMessageBuilder::addBoolEntry(const std::string& key, bool value) {
+void TelemetryMessageBuilder::addBoolEntry(const std::string & key, bool value)
+{
   auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryBool>();
   e->key = key;
   e->value = value;
   message_.entries[key] = std::move(e);
 }
 
-void TelemetryMessageBuilder::addAnyTypeAllowedEntry(const std::string& key, const std::string& value, const std::string& value_type) {
+void TelemetryMessageBuilder::addAnyTypeAllowedEntry(
+  const std::string & key, const std::string & value, const std::string & value_type)
+{
   auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryAnyTypeAllowed>();
   e->key = key;
   e->value = value;
@@ -41,8 +49,10 @@ void TelemetryMessageBuilder::addAnyTypeAllowedEntry(const std::string& key, con
   message_.entries[key] = std::move(e);
 }
 
-std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const {
-  // Encode as CBOR map: { key: [ type_code(uint), value ] }, exept for AnyTypeAllowed, here { key: [ type_code(uint), [ type(string), value(string) ] ] }
+std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const
+{
+  // Encode as CBOR map: { key: [ type_code(uint), value ] }, exept for AnyTypeAllowed, here { key: [ type_code(uint), [
+  // type(string), value(string) ] ] }
   std::vector<uint8_t> buf(4096);
   CborEncoder encoder;
   cbor_encoder_init(&encoder, buf.data(), buf.size(), 0);
@@ -67,27 +77,27 @@ std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const {
     // second element: actual value depending on type
     switch (entry_ptr->type()) {
       case TelemetryMessage::EntryType::Int: {
-        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryInt*>(entry_ptr.get());
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryInt *>(entry_ptr.get());
         cbor_encode_int(&arr, p->value);
         break;
       }
       case TelemetryMessage::EntryType::Double: {
-        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryFloat*>(entry_ptr.get());
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryFloat *>(entry_ptr.get());
         cbor_encode_double(&arr, p->value);
         break;
       }
       case TelemetryMessage::EntryType::String: {
-        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryString*>(entry_ptr.get());
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryString *>(entry_ptr.get());
         cbor_encode_text_string(&arr, p->value.c_str(), p->value.size());
         break;
       }
       case TelemetryMessage::EntryType::Bool: {
-        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryBool*>(entry_ptr.get());
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryBool *>(entry_ptr.get());
         cbor_encode_boolean(&arr, p->value);
         break;
       }
       case TelemetryMessage::EntryType::AnyTypeAllowed: {
-        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryAnyTypeAllowed*>(entry_ptr.get());
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryAnyTypeAllowed *>(entry_ptr.get());
         // encode inner as array [inner_type, inner_value]
         CborEncoder innerArr;
         cbor_encoder_create_array(&arr, &innerArr, 2);
@@ -113,12 +123,14 @@ std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const {
   return buf;
 }
 
-bool TelemetryMessageBuilder::resetMessage() {
+bool TelemetryMessageBuilder::resetMessage()
+{
   message_.entries.clear();
   return true;
 }
 
-bool TelemetryMessageBuilder::fromSerializedMessage(const std::vector<uint8_t>& data) {
+bool TelemetryMessageBuilder::fromSerializedMessage(const std::vector<uint8_t> & data)
+{
   message_.entries.clear();
 
   CborParser parser;

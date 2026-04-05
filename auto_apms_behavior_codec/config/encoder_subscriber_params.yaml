@@ -1,4 +1,4 @@
-auto_apms_behavior_codec::encoder_params:
+auto_apms_behavior_codec::encoder_subscriber_params:
   node_manifest:
     type: string_array
     default_value: []

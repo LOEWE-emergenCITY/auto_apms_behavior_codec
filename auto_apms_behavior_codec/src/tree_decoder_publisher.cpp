@@ -4,13 +4,11 @@ namespace auto_apms_behavior_codec
 {
 
 TreeDecoderPublisher::TreeDecoderPublisher(const rclcpp::NodeOptions & options)
-: BehaviorTreeDecoderBase("tree_decoder_publisher", options),
-  param_listener_(this)
+: BehaviorTreeDecoderBase("tree_decoder_publisher", options), param_listener_(this)
 {
   const auto params = param_listener_.get_params();
   xml_publisher_ =
-    this->create_publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(
-      params.xml_out_topic, 10);
+    this->create_publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(params.xml_out_topic, 10);
 }
 
 void TreeDecoderPublisher::onTreeDecoded(const std::string & xml_string)

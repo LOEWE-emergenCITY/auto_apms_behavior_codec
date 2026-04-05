@@ -1,23 +1,28 @@
-#include <rclcpp/rclcpp.hpp>
+#include <iomanip>
+
 #include "auto_apms_behavior_codec/telemetry_message_builder.hpp"
 #include "auto_apms_behavior_codec_interfaces/msg/serialized_telemetry_message.hpp"
-#include <iomanip>
+#include "rclcpp/rclcpp.hpp"
 
 using namespace std::chrono_literals;
 using namespace auto_apms_behavior_codec;
 
-class DummyTelemetryGenerator : public rclcpp::Node {
+class DummyTelemetryGenerator : public rclcpp::Node
+{
 public:
-  DummyTelemetryGenerator()
-  : Node("DummyTelemetryGenerator") {
+  DummyTelemetryGenerator() : Node("DummyTelemetryGenerator")
+  {
     auto period_ms = 30000;
-    publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>("TelemetryOut", 10);
-    timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&DummyTelemetryGenerator::onTimer, this));
+    publisher_ =
+      this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>("TelemetryOut", 10);
+    timer_ =
+      this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&DummyTelemetryGenerator::onTimer, this));
     RCLCPP_INFO(this->get_logger(), "DummyTelemetryGenerator started with period %d ms", period_ms);
   }
 
 private:
-  void onTimer() {
+  void onTimer()
+  {
     TelemetryMessageBuilder builder;
     // fixed telemetry values
     builder.addIntEntry("count", 42);
@@ -44,7 +49,8 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-int main(int argc, char ** argv) {
+int main(int argc, char ** argv)
+{
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<DummyTelemetryGenerator>());
   rclcpp::shutdown();

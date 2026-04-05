@@ -17,9 +17,7 @@ namespace auto_apms_behavior_codec
 class BehaviorTreeDecoderBase : public rclcpp::Node
 {
 public:
-  BehaviorTreeDecoderBase(
-    const std::string & node_name,
-    const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+  BehaviorTreeDecoderBase(const std::string & node_name, const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
   ~BehaviorTreeDecoderBase() override = default;
 
@@ -36,11 +34,9 @@ private:
   std::string reconstructXML(const behavior_tree_representation::Document & document);
 
   auto_apms_behavior_tree::core::TreeDocument::TreeElement getTreeElementFromTree(
-    const behavior_tree_representation::Tree & tree,
-    auto_apms_behavior_tree::core::TreeDocument & tree_doc);
+    const behavior_tree_representation::Tree & tree, auto_apms_behavior_tree::core::TreeDocument & tree_doc);
 
-  void encodedInCallback(
-    const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg);
+  void encodedInCallback(const auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage::SharedPtr msg);
 
   decoder_base_params::ParamListener param_listener_;
   std::shared_ptr<DictionaryManager> dictionary_manager_;

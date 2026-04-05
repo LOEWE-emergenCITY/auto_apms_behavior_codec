@@ -1,42 +1,48 @@
 #pragma once
 
-#include <vector>
-#include <string>
-#include <memory>
 #include <iostream>
-
-#include "cbor.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "auto_apms_behavior_codec/dictionary_manager.hpp"
+#include "cbor.h"
 
-namespace behavior_tree_representation {
+namespace behavior_tree_representation
+{
 
-struct Port {
+struct Port
+{
   virtual ~Port() = default;
 
-  //get id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // get id of the port, this is its index in the vector of ports for the node, this is may differ between ports with
+  // same name/type, if they belong to different nodes
   virtual uint16_t getID() const = 0;
-  //serializes the Port using a given CBOR encoder object, implementation depending on the type of the port
-  virtual bool serialize(CborEncoder* encoder) const = 0;
+  // serializes the Port using a given CBOR encoder object, implementation depending on the type of the port
+  virtual bool serialize(CborEncoder * encoder) const = 0;
 
   virtual std::string getType() const = 0;
 };
 
-struct PortInt : public Port {
+struct PortInt : public Port
+{
   explicit PortInt(int32_t v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
-  
-  std::string getType() const override { return "Int";};
+
+  std::string getType() const override { return "Int"; };
 
   int32_t value;
 
-  //serializes the Port using a given CBOR encoder object
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortUInt : public Port {
+struct PortUInt : public Port
+{
   explicit PortUInt(uint32_t v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
@@ -44,99 +50,120 @@ struct PortUInt : public Port {
 
   uint32_t value;
 
-  bool serialize(CborEncoder* encoder) const override;
-  private:
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
   int16_t id;
 };
 
-struct PortFloat : public Port {
+struct PortFloat : public Port
+{
   explicit PortFloat(float v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "Float";};
+  std::string getType() const override { return "Float"; };
 
   float value;
 
-  //serializes the Port using a given CBOR encoder object
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortDouble : public Port {
+struct PortDouble : public Port
+{
   explicit PortDouble(double v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "Double";};
+  std::string getType() const override { return "Double"; };
 
   double value;
 
-  //serializes the Port using a given CBOR encoder object
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortString : public Port {
-  explicit PortString(const std::string& v, int16_t id) : value(v), id(id) {}
+struct PortString : public Port
+{
+  explicit PortString(const std::string & v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "String";};
+  std::string getType() const override { return "String"; };
 
   std::string value;
 
-  //serializes the Port using a given CBOR encoder object
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortBool : public Port {
+struct PortBool : public Port
+{
   explicit PortBool(bool v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "Bool";};
+  std::string getType() const override { return "Bool"; };
 
   bool value;
 
-  //serializes the Port using a given CBOR encoder object
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortAnyTypeAllowed : public Port {
+struct PortAnyTypeAllowed : public Port
+{
   explicit PortAnyTypeAllowed(std::string v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "BT::AnyTypeAllowed";};
+  std::string getType() const override { return "BT::AnyTypeAllowed"; };
 
-  //just store exactly what is written in the xml
+  // just store exactly what is written in the xml
   std::string value;
 
-  //serializes the Port using a given CBOR encoder object 
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortAny : public Port {
+struct PortAny : public Port
+{
   explicit PortAny(std::string v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "BT::Any";};
+  std::string getType() const override { return "BT::Any"; };
 
-  //just store exactly what is written in the xml
+  // just store exactly what is written in the xml
   std::string value;
 
-  //serializes the Port using a given CBOR encoder object 
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortNodeStatus : public Port {
-  explicit PortNodeStatus(std::string v, int16_t id) : string_value(v), id(id) {
+struct PortNodeStatus : public Port
+{
+  explicit PortNodeStatus(std::string v, int16_t id) : string_value(v), id(id)
+  {
     // Convert string to enum
     if (string_value == "IDLE") {
       value = BT::NodeStatus::IDLE;
@@ -148,96 +175,117 @@ struct PortNodeStatus : public Port {
       value = BT::NodeStatus::FAILURE;
     } else if (string_value == "SKIPPED") {
       value = BT::NodeStatus::SKIPPED;
-    }
-    else {
+    } else {
       std::cerr << "Warning: Unrecognized NodeStatus string '" << string_value << "'." << std::endl;
-      value = (BT::NodeStatus)10; // assign invalid value, in order to mark failure.
+      value = (BT::NodeStatus)10;  // assign invalid value, in order to mark failure.
     }
   }
   uint16_t getID() const override { return this->id; }
 
-  static std::string getEnumString(BT::NodeStatus status) {
+  static std::string getEnumString(BT::NodeStatus status)
+  {
     switch (status) {
-      case BT::NodeStatus::IDLE: return "IDLE";
-      case BT::NodeStatus::RUNNING: return "RUNNING";
-      case BT::NodeStatus::SUCCESS: return "SUCCESS";
-      case BT::NodeStatus::FAILURE: return "FAILURE";
-      case BT::NodeStatus::SKIPPED: return "SKIPPED";
-      default: return "Error";
+      case BT::NodeStatus::IDLE:
+        return "IDLE";
+      case BT::NodeStatus::RUNNING:
+        return "RUNNING";
+      case BT::NodeStatus::SUCCESS:
+        return "SUCCESS";
+      case BT::NodeStatus::FAILURE:
+        return "FAILURE";
+      case BT::NodeStatus::SKIPPED:
+        return "SKIPPED";
+      default:
+        return "Error";
     }
   }
 
-  std::string getType() const override { return "BT::NodeStatus";};
+  std::string getType() const override { return "BT::NodeStatus"; };
 
-  std::string string_value; //in the3 xml the NodeStatus will be represented as string, store that here
+  std::string string_value;  // in the3 xml the NodeStatus will be represented as string, store that here
 
-  BT::NodeStatus value; // store the string converted to the Enum from BT namespace, this is also used for transmission
+  BT::NodeStatus value;  // store the string converted to the Enum from BT namespace, this is also used for transmission
 
-  //serializes the Port using a given CBOR encoder object 
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-//special hadling for ports of subtree, leads to much less efficient encoding, personally, i think SubTrees should be avoided, or some large change be made
-struct PortSubTreeSpecial : public Port {
+// special hadling for ports of subtree, leads to much less efficient encoding, personally, i think SubTrees should be
+// avoided, or some large change be made
+struct PortSubTreeSpecial : public Port
+{
   explicit PortSubTreeSpecial(std::string v, std::string name, int16_t id) : value(v), name(name), id(id) {}
   uint16_t getID() const override { return this->id; }
 
-  std::string getType() const override { return "SubTreeSpecial";};
+  std::string getType() const override { return "SubTreeSpecial"; };
 
-  //store value from XML
+  // store value from XML
   std::string value;
 
-  //store Attribute Name from XML
+  // store Attribute Name from XML
   std::string name;
 
-  //serializes the Port using a given CBOR encoder object 
-  bool serialize(CborEncoder* encoder) const override;
-  private:
-  int16_t id; //id of the port, this is its index in the vector of ports for the node, this is may differ between ports with same name/type, if they belong to different nodes
+  // serializes the Port using a given CBOR encoder object
+  bool serialize(CborEncoder * encoder) const override;
+
+private:
+  int16_t id;  // id of the port, this is its index in the vector of ports for the node, this is may differ between
+               // ports with same name/type, if they belong to different nodes
 };
 
-struct PortInvalid : public Port {
-  explicit PortInvalid(const std::string& v, int16_t id) : value(v), id(id) {}
+struct PortInvalid : public Port
+{
+  explicit PortInvalid(const std::string & v, int16_t id) : value(v), id(id) {}
   uint16_t getID() const override { return this->id; }
   std::string getType() const override { return "Invalid"; }
   std::string value;
-  bool serialize(CborEncoder* encoder) const override;
+  bool serialize(CborEncoder * encoder) const override;
+
 private:
   int16_t id;
 };
 
-struct Node {
+struct Node
+{
   std::string type_name;
   std::string instance_name;
-  std::vector<std::shared_ptr<Port>> ports; //ports of the node, same order as in xml
-  std::vector<std::shared_ptr<Node>> children; //children of the node, same order as in xml
+  std::vector<std::shared_ptr<Port>> ports;     // ports of the node, same order as in xml
+  std::vector<std::shared_ptr<Node>> children;  // children of the node, same order as in xml
 
   void print() const;
-   //serializes the Node using a given CBOR encoder object using the given dictionary as reference for node and port type codes
-  bool serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
+  // serializes the Node using a given CBOR encoder object using the given dictionary as reference for node and port
+  // type codes
+  bool serialize(
+    CborEncoder * encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
 };
 
-struct Tree {
-  Node root; // root node of the tree
+struct Tree
+{
+  Node root;  // root node of the tree
   std::string name;
   void print() const;
 
-  //serializes the Tree using a given CBOR encoder object using the given dictionary as reference for node and port type codes
-  bool serialize(CborEncoder* encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
-
+  // serializes the Tree using a given CBOR encoder object using the given dictionary as reference for node and port
+  // type codes
+  bool serialize(
+    CborEncoder * encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
 };
 
-struct Document {
-  std::vector<Tree> trees; //trees contained in the document, same order as in xml
-  std::string main_tree_to_execute; //is this required?
+struct Document
+{
+  std::vector<Tree> trees;           // trees contained in the document, same order as in xml
+  std::string main_tree_to_execute;  // is this required?
   void print() const;
-  //serializes the document using CBOR using the given dictionary as reference for node and port type codes
+  // serializes the document using CBOR using the given dictionary as reference for node and port type codes
   std::vector<uint8_t> serialize(std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const;
-  
+
   // Deserialize CBOR into a Document using the provided dictionary manager
-  bool deserialize(const std::vector<uint8_t>& data, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager);
+  bool deserialize(
+    const std::vector<uint8_t> & data, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager);
 };
 
-} // namespace behavior_tree_representation
+}  // namespace behavior_tree_representation
