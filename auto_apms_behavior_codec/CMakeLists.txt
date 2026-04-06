@@ -13,6 +13,7 @@ find_package(auto_apms_behavior_tree_core REQUIRED)
 find_package(auto_apms_behavior_tree REQUIRED)
 find_package(auto_apms_behavior_codec_interfaces REQUIRED)
 find_package(auto_apms_interfaces REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(generate_parameter_library REQUIRED)
 
 # Generate parameter headers employing https://github.com/PickNikRobotics/generate_parameter_library
@@ -46,8 +47,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   tinycbor
 )
 
+# Ensure static libraries can be linked into shared libraries
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Add behavior tree representation source files
-add_library(behavior_tree_representation
+add_library(behavior_tree_representation STATIC
   src/behavior_tree_representation.cpp
   src/cbor_serialization.cpp
   src/cbor_deserialization.cpp
@@ -91,39 +95,41 @@ target_link_libraries(behavior_tree_encoder_base PUBLIC
   encoder_base_params
 )
 
-# Encoder subscriber executable
-add_executable(tree_encoder_subscriber 
+# Encoder subscriber component
+add_library(tree_encoder_subscriber_component SHARED
   src/tree_encoder_subscriber.cpp
 )
-target_include_directories(tree_encoder_subscriber PRIVATE
+target_include_directories(tree_encoder_subscriber_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(tree_encoder_subscriber PRIVATE
+target_link_libraries(tree_encoder_subscriber_component PUBLIC
   behavior_tree_encoder_base
+  rclcpp_components::component
   encoder_subscriber_params
 )
+rclcpp_components_register_node(tree_encoder_subscriber_component
+  PLUGIN "auto_apms_behavior_codec::TreeEncoderSubscriber"
+  EXECUTABLE tree_encoder_subscriber
+)
 
-# Encoder executor proxy library
-add_library(tree_encoder_executor_proxy_lib STATIC
+# Encoder executor proxy
+add_library(tree_encoder_executor_proxy_component SHARED
   src/tree_encoder_executor_proxy.cpp
 )
-target_include_directories(tree_encoder_executor_proxy_lib PUBLIC
+target_include_directories(tree_encoder_executor_proxy_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(tree_encoder_executor_proxy_lib PUBLIC
+target_link_libraries(tree_encoder_executor_proxy_component PUBLIC
   behavior_tree_encoder_base
   ${PROJECT_NAME}
   rclcpp_action::rclcpp_action
+  rclcpp_components::component
   auto_apms_behavior_tree::auto_apms_behavior_tree
   ${auto_apms_interfaces_TARGETS}
   ${auto_apms_behavior_codec_interfaces_TARGETS}
   encoder_executor_proxy_params
 )
-
-# Encoder executor proxy executable
-add_executable(tree_encoder_executor_proxy
-  src/tree_encoder_executor_proxy_main.cpp
-)
-target_link_libraries(tree_encoder_executor_proxy PRIVATE
-  tree_encoder_executor_proxy_lib
+rclcpp_components_register_node(tree_encoder_executor_proxy_component
+  PLUGIN "auto_apms_behavior_codec::TreeEncoderExecutorProxy"
+  EXECUTABLE tree_encoder_executor_proxy
 )
 
 #
@@ -145,28 +151,38 @@ target_link_libraries(behavior_tree_decoder_base PUBLIC
   decoder_base_params
 )
 
-# Decoder publisher executable
-add_executable(tree_decoder_publisher 
+# Decoder publisher component
+add_library(tree_decoder_publisher_component SHARED
   src/tree_decoder_publisher.cpp
 )
-target_include_directories(tree_decoder_publisher PRIVATE
+target_include_directories(tree_decoder_publisher_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(tree_decoder_publisher PRIVATE
+target_link_libraries(tree_decoder_publisher_component PUBLIC
   behavior_tree_decoder_base
+  rclcpp_components::component
   decoder_publisher_params
 )
+rclcpp_components_register_node(tree_decoder_publisher_component
+  PLUGIN "auto_apms_behavior_codec::TreeDecoderPublisher"
+  EXECUTABLE tree_decoder_publisher
+)
 
-# Decoder executor client executable
-add_executable(tree_decoder_executor_client 
+# Decoder executor client component
+add_library(tree_decoder_executor_client_component SHARED
   src/tree_decoder_executor_client.cpp
 )
-target_include_directories(tree_decoder_executor_client PRIVATE
+target_include_directories(tree_decoder_executor_client_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(tree_decoder_executor_client PRIVATE
+target_link_libraries(tree_decoder_executor_client_component PUBLIC
   behavior_tree_decoder_base
   rclcpp_action::rclcpp_action
+  rclcpp_components::component
   ${auto_apms_interfaces_TARGETS}
   decoder_executor_client_params
+)
+rclcpp_components_register_node(tree_decoder_executor_client_component
+  PLUGIN "auto_apms_behavior_codec::TreeDecoderExecutorClient"
+  EXECUTABLE tree_decoder_executor_client
 )
 
 #
@@ -178,7 +194,12 @@ install(DIRECTORY include/${PROJECT_NAME}
   DESTINATION include
 )
 # Install library and export targets
-install(TARGETS ${PROJECT_NAME}
+ament_export_targets(
+  export_${PROJECT_NAME}
+)
+install(
+  TARGETS 
+  ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -188,18 +209,17 @@ install(EXPORT export_${PROJECT_NAME}
   NAMESPACE ${PROJECT_NAME}::
   DESTINATION share/${PROJECT_NAME}/cmake
 )
-ament_export_targets(
-  export_${PROJECT_NAME}
-)
 
-# Install executables
+# Install component libraries (loaded at runtime by the component container)
 install(
-  TARGETS 
-  tree_encoder_subscriber
-  tree_encoder_executor_proxy
-  tree_decoder_publisher
-  tree_decoder_executor_client
-  DESTINATION lib/${PROJECT_NAME}
+  TARGETS
+  tree_encoder_subscriber_component
+  tree_encoder_executor_proxy_component
+  tree_decoder_publisher_component
+  tree_decoder_executor_client_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 if(BUILD_TESTING)
@@ -215,14 +235,15 @@ if(BUILD_TESTING)
     auto_apms_behavior_tree::auto_apms_behavior_tree
   )
   target_include_directories(test_unit PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  )
 
   # Integration tests
   ament_add_gtest(test_integration
     test/test_tree_encoder_executor_proxy.cpp
   )
   target_link_libraries(test_integration
-    tree_encoder_executor_proxy_lib
+    tree_encoder_executor_proxy_component
   )
 endif()
 

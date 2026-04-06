@@ -13,6 +13,7 @@
 
   <depend>rclcpp</depend>
   <depend>rclcpp_action</depend>
+  <depend>rclcpp_components</depend>
   <depend>auto_apms_behavior_tree_core</depend>
   <depend>auto_apms_behavior_tree</depend>
   <depend>auto_apms_behavior_codec_interfaces</depend>

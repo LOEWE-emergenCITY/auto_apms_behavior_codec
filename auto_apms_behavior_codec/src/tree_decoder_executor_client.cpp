@@ -91,10 +91,5 @@ void TreeDecoderExecutorClient::resultCallback(const GoalHandle::WrappedResult &
 
 }  // namespace auto_apms_behavior_codec
 
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<auto_apms_behavior_codec::TreeDecoderExecutorClient>());
-  rclcpp::shutdown();
-  return 0;
-}
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(auto_apms_behavior_codec::TreeDecoderExecutorClient)

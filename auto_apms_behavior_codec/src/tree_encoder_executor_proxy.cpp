@@ -273,3 +273,6 @@ void TreeEncoderExecutorProxy::telemetryCallback(
 }
 
 }  // namespace auto_apms_behavior_codec
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(auto_apms_behavior_codec::TreeEncoderExecutorProxy)
