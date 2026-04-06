@@ -23,6 +23,7 @@ generate_parameter_library(encoder_executor_proxy_params "config/encoder_executo
 generate_parameter_library(decoder_base_params "config/decoder_base_params.yaml")
 generate_parameter_library(decoder_publisher_params "config/decoder_publisher_params.yaml")
 generate_parameter_library(decoder_executor_client_params "config/decoder_executor_client_params.yaml")
+generate_parameter_library(decoder_executor_params "config/decoder_executor_params.yaml")
 
 # Fetch tinycbor
 include(FetchContent)
@@ -185,6 +186,25 @@ rclcpp_components_register_node(tree_decoder_executor_client_component
   EXECUTABLE tree_decoder_executor_client
 )
 
+# Decoder executor component (remote endpoint for TreeEncoderExecutorProxy)
+add_library(tree_decoder_executor_component SHARED
+  src/tree_decoder_executor.cpp
+)
+target_include_directories(tree_decoder_executor_component PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_link_libraries(tree_decoder_executor_component PUBLIC
+  behavior_tree_decoder_base
+  ${PROJECT_NAME}
+  rclcpp_components::component
+  auto_apms_behavior_tree::auto_apms_behavior_tree
+  ${auto_apms_behavior_codec_interfaces_TARGETS}
+  decoder_executor_params
+)
+rclcpp_components_register_node(tree_decoder_executor_component
+  PLUGIN "auto_apms_behavior_codec::TreeDecoderExecutor"
+  EXECUTABLE tree_decoder_executor
+)
+
 #
 # EXPORT & INSTALLATION
 #
@@ -217,6 +237,7 @@ install(
   tree_encoder_executor_proxy_component
   tree_decoder_publisher_component
   tree_decoder_executor_client_component
+  tree_decoder_executor_component
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

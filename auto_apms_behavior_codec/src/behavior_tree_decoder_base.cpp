@@ -5,32 +5,8 @@
 namespace auto_apms_behavior_codec
 {
 
-BehaviorTreeDecoderBase::BehaviorTreeDecoderBase(const std::string & node_name, const rclcpp::NodeOptions & options)
-: rclcpp::Node(node_name, options), param_listener_(this)
-{
-  setupDecoder();
-}
-
-auto_apms_behavior_tree::core::NodeManifest BehaviorTreeDecoderBase::getNodeManifest() const
-{
-  return dictionary_manager_->getNodeManifest();
-}
-
-void BehaviorTreeDecoderBase::setupDecoder()
-{
-  const auto params = param_listener_.get_params();
-
-  std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> manifest_ids(
-    params.node_manifest.begin(), params.node_manifest.end());
-  dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
-
-  encoded_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
-    params.encoded_in_topic, 10, std::bind(&BehaviorTreeDecoderBase::encodedInCallback, this, std::placeholders::_1));
-}
-
-static std::map<std::string, std::string> get_port_map(
-  const behavior_tree_representation::Node & node,
-  std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager)
+static std::map<std::string, std::string> getPortMap(
+  const behavior_tree_representation::Node & node, const std::shared_ptr<DictionaryManager> & dictionary_manager)
 {
   std::map<std::string, std::string> port_map;
 
@@ -122,11 +98,11 @@ static std::map<std::string, std::string> get_port_map(
 
 static auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeConstruction(
   const behavior_tree_representation::Node & node, auto_apms_behavior_tree::core::TreeDocument::NodeElement & base_node,
-  std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager)
+  const std::shared_ptr<DictionaryManager> & dictionary_manager)
 {
   RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Constructing node '%s'", node.type_name.c_str());
 
-  auto port_map = get_port_map(node, dictionary_manager);
+  auto port_map = getPortMap(node, dictionary_manager);
   auto xml_element = base_node.getXMLElement();
   for (const auto & [port_name, port_value] : port_map) {
     xml_element->SetAttribute(port_name.c_str(), port_value.c_str());
@@ -155,21 +131,42 @@ static auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeCon
   return base_node;
 }
 
+BehaviorTreeDecoderBase::BehaviorTreeDecoderBase(const std::string & node_name, const rclcpp::NodeOptions & options)
+: rclcpp::Node(node_name, options), param_listener_(this)
+{
+  setupDecoder();
+}
+
+auto_apms_behavior_tree::core::NodeManifest BehaviorTreeDecoderBase::getNodeManifest() const
+{
+  return dictionary_manager_->getNodeManifest();
+}
+
+void BehaviorTreeDecoderBase::setupDecoder()
+{
+  const auto params = param_listener_.get_params();
+
+  std::vector<auto_apms_behavior_tree::core::NodeManifestResourceIdentity> manifest_ids(
+    params.node_manifest.begin(), params.node_manifest.end());
+  dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
+
+  encoded_subscription_ = this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
+    params.encoded_in_topic, 10, std::bind(&BehaviorTreeDecoderBase::encodedInCallback, this, std::placeholders::_1));
+}
+
 std::string BehaviorTreeDecoderBase::reconstructXML(const behavior_tree_representation::Document & document)
 {
   auto_apms_behavior_tree::core::TreeDocument tree_doc;
-  tree_doc.registerNodes(this->dictionary_manager_->getNodeManifest());
+  tree_doc.registerNodes(dictionary_manager_->getNodeManifest());
   for (const auto & tree : document.trees) {
-    RCLCPP_DEBUG(this->get_logger(), "Processing tree '%s' for XML reconstruction", tree.name.c_str());
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("behavior_tree_decoder"), "Processing tree '%s' for XML reconstruction", tree.name.c_str());
     if (tree.name == document.main_tree_to_execute) {
       getTreeElementFromTree(tree, tree_doc).makeRoot();
     } else {
       getTreeElementFromTree(tree, tree_doc);
     }
-    RCLCPP_DEBUG(this->get_logger(), "Finished processing tree '%s'", tree.name.c_str());
-    RCLCPP_DEBUG(
-      this->get_logger(), "Current state of TreeDocument after processing tree '%s':\n%s", tree.name.c_str(),
-      tree_doc.writeToString().c_str());
+    RCLCPP_DEBUG(rclcpp::get_logger("behavior_tree_decoder"), "Finished processing tree '%s'", tree.name.c_str());
   }
 
   return tree_doc.writeToString();
@@ -178,11 +175,13 @@ std::string BehaviorTreeDecoderBase::reconstructXML(const behavior_tree_represen
 auto_apms_behavior_tree::core::TreeDocument::TreeElement BehaviorTreeDecoderBase::getTreeElementFromTree(
   const behavior_tree_representation::Tree & tree, auto_apms_behavior_tree::core::TreeDocument & tree_doc)
 {
-  RCLCPP_INFO(this->get_logger(), "Constructing TreeElement for tree '%s'", tree.name.c_str());
+  RCLCPP_DEBUG(
+    rclcpp::get_logger("behavior_tree_decoder"), "Constructing TreeElement for tree '%s'", tree.name.c_str());
   auto tree_element = tree_doc.newTree(tree.name);
   auto root = tree_element.insertNode(tree.root.type_name);
   recursiveNodeConstruction(tree.root, root, dictionary_manager_);
-  RCLCPP_INFO(this->get_logger(), "Finished constructing TreeElement for tree '%s'", tree.name.c_str());
+  RCLCPP_DEBUG(
+    rclcpp::get_logger("behavior_tree_decoder"), "Finished constructing TreeElement for tree '%s'", tree.name.c_str());
   return tree_element;
 }
 
@@ -194,19 +193,19 @@ void BehaviorTreeDecoderBase::encodedInCallback(
   behavior_tree_representation::Document document;
   bool ok = document.deserialize(msg->serialized_tree_message, dictionary_manager_);
 
-  if (ok) {
-    RCLCPP_INFO(this->get_logger(), "Successfully deserialized message into Document");
-
-    std::string xml_string = reconstructXML(document);
-
-    if (!xml_string.empty()) {
-      RCLCPP_INFO(this->get_logger(), "Reconstructed XML:\n%s", xml_string.c_str());
-      onTreeDecoded(xml_string);
-    } else {
-      RCLCPP_ERROR(this->get_logger(), "Failed to reconstruct XML from Document");
-    }
-  } else {
+  if (!ok) {
     RCLCPP_ERROR(this->get_logger(), "Failed to deserialize message into Document");
+    return;
+  }
+
+  RCLCPP_DEBUG(this->get_logger(), "Successfully deserialized message into Document");
+
+  std::string xml_string = reconstructXML(document);
+  if (!xml_string.empty()) {
+    RCLCPP_INFO(this->get_logger(), "Reconstructed XML:\n%s", xml_string.c_str());
+    onTreeDecoded(xml_string);
+  } else {
+    RCLCPP_ERROR(this->get_logger(), "Failed to decode serialized tree message");
   }
 }
 

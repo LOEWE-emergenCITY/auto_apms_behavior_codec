@@ -107,6 +107,32 @@ The action goal is populated with:
 ros2 run auto_apms_behavior_codec tree_decoder_executor_client --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
+### Decoder Executor
+The `tree_decoder_executor` is the decoder-side counterpart of `TreeEncoderExecutorProxy`. It combines a full `GenericTreeExecutorNode` with the codec decoding pipeline, acting as the remote endpoint that the proxy communicates with via serialized messages.
+
+Unlike `tree_decoder_executor_client` (which forwards decoded XML to a separate executor node via an action client), `tree_decoder_executor` **is** the executor. It directly decodes incoming trees, registers them, receives START/CANCEL commands, executes behavior trees, and publishes telemetry — all in a single node.
+
+**Communication flow with the proxy:**
+
+1. Proxy publishes encoded tree → this node decodes it and reports registered tree names via telemetry.
+2. Proxy sees trees registered in telemetry → sends `START` command.
+3. This node starts execution → telemetry state changes to `RUNNING`.
+4. Execution completes → telemetry state returns to `IDLE` → proxy detects completion.
+
+**Parameters** (in addition to all `GenericTreeExecutorNode` parameters):
+
+| Parameter | Default | Description |
+|---|---|---|
+| `node_manifest` | `[]` | Node manifest identities for building the dictionary |
+| `encoded_in_topic` | `serialized_tree_in` | Topic for incoming serialized tree messages |
+| `executor_command_topic` | `executor_command` | Topic for incoming executor command messages |
+| `telemetry_topic` | `serialized_telemetry_out` | Topic for publishing serialized telemetry |
+| `telemetry_rate` | `10.0` | Telemetry publish rate in Hz |
+
+```bash
+ros2 run auto_apms_behavior_codec tree_decoder_executor
+```
+
 ## Sending data to the encoder
 
 ```bash
