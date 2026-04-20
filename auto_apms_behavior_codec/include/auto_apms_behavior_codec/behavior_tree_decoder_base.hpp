@@ -33,6 +33,7 @@ private:
 
   std::string reconstructXML(const behavior_tree_representation::Document & document);
 
+  // adds the tree described by the passed behavior_tree_representation::Tree to the TreeDocument and returns the tree element which was added
   auto_apms_behavior_tree::core::TreeDocument::TreeElement getTreeElementFromTree(
     const behavior_tree_representation::Tree & tree, auto_apms_behavior_tree::core::TreeDocument & tree_doc);
 
