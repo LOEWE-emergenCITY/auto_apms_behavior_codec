@@ -40,9 +40,27 @@ A special "invalid" port encoding is defined, this does not have an unsiged inte
 #### Special Handling of SubTree Ports
 The ports of a SubTree are not known beforehand, therefore the names of the ports are included in the encoded version and the value as string. Additionally the "_autoremap" field is included as bool.
 
-### Current State
-Currently the encoding is functional, exept for handling of SubTrees. The [example document](auto_apms_behavior_codec_examples/behavior/hello_world.xml) is encoded to: 
-`82 82 61 4d 83 18 19 80 82 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 48 65 6c 6c 6f 02 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 57 6f 72 6c 64 02 82 61 50 82 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f`
+#### Supported Port Types:
+`Encoding` in the following table referse to the CBOR type of the second element of the port array, the first element is always the port id. The description column is left empty if no further comment is required.
+| Port Type | Encoding | Description |
+|---|---|---|
+|"Int"| `Integer`  |  |
+|"UInt"| `Unsigned Integer` |  |
+|"Float"| `Float` |  |
+|"Double"| `Double` |  |
+|"String"| `TextString` |  |
+|"Bool"| `Boolean` |  |
+|"BT::AnyTypeAllowed"| `TextString` | The `BT::AnyTypeAllowed` port allows any type of value to be passed through it, to achieve this the value for this port, as read from the XML input string is just encoded as a String. |
+|"BT::Any"| `TextString` | Same as `BT::AnyTypeAllowed`, required for compatibility reasons |
+|"BT::NodeStatus"| `Unsigned Integer` | Encodes Node Status using the `BT::NodeStatus` enum and encoding its value as an unsigned Integer. |
+|"SubTreeSpecial"| `TextString`, `TextString` | Encodes both name of the Port of the sub tree as well as the passed value, both as strings. The name is included as the first element and the value as the second element. |
+|"Invalid"| `TextString` | The order of PortID and the String containing the value is reversed in order to simplifie detection. The included string includes exactly the content from the XML which could not be converted to a valid port type. |
+
+### Current State and encoded example
+The following is an encoding example, using the [Hello World](/src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml) behavior tree.
+
+  83 f4 82 64 4d 61 69 6e 83 18 19 80 83 82 18 1e 83 83 00 62 49 44 65 50 72 69 6e 74 83 01 63 6d 73 67 65 48 65 6c 6c 6f 82 02 f4 82 18 1d 81 82 00 19 0b b8 82 18 1e 83 83 00 62 49 44 65 50 72 69 6e 74 83 01 63 6d 73 67 65 57 6f 72 6c 64 82 02 f4 82 65 50 72 69 6e 74 82 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f 
+
 
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
