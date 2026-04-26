@@ -11,7 +11,7 @@ TreeDecoderPublisher::TreeDecoderPublisher(const rclcpp::NodeOptions & options)
     this->create_publisher<auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage>(params.xml_out_topic, 10);
 }
 
-void TreeDecoderPublisher::onTreeDecoded(const std::string & xml_string)
+void TreeDecoderPublisher::onTreeDecoded(const std::string & xml_string, const std::string & /*encoded_bytes_hash*/)
 {
   auto xml_msg = auto_apms_behavior_codec_interfaces::msg::TreeXmlMessage();
   xml_msg.tree_xml_message = xml_string;
@@ -21,10 +21,5 @@ void TreeDecoderPublisher::onTreeDecoded(const std::string & xml_string)
 
 }  // namespace auto_apms_behavior_codec
 
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<auto_apms_behavior_codec::TreeDecoderPublisher>());
-  rclcpp::shutdown();
-  return 0;
-}
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(auto_apms_behavior_codec::TreeDecoderPublisher)

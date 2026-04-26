@@ -1,18 +1,6 @@
 auto_apms_behavior_codec::encoder_subscriber_params:
-  node_manifest:
-    type: string_array
-    default_value: []
-    read_only: true
-    description: List of node manifest resource identities used to build the dictionary. If empty, all registered node manifests will be used.
-
   xml_in_topic:
     type: string
     default_value: "xml_in"
     read_only: true
     description: Topic name for incoming XML messages.
-
-  encoded_out_topic:
-    type: string
-    default_value: "serialized_tree_out"
-    read_only: true
-    description: Topic name for outgoing encoded messages.

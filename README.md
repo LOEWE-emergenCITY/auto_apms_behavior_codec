@@ -40,38 +40,47 @@ A special "invalid" port encoding is defined, this does not have an unsiged inte
 #### Special Handling of SubTree Ports
 The ports of a SubTree are not known beforehand, therefore the names of the ports are included in the encoded version and the value as string. Additionally the "_autoremap" field is included as bool.
 
-#### Supported Port Types:
-`Encoding` in the following table referse to the CBOR type of the second element of the port array, the first element is always the port id. The description column is left empty if no further comment is required.
-| Port Type | Encoding | Description |
-|---|---|---|
-|"Int"| `Integer`  |  |
-|"UInt"| `Unsigned Integer` |  |
-|"Float"| `Float` |  |
-|"Double"| `Double` |  |
-|"String"| `TextString` |  |
-|"Bool"| `Boolean` |  |
-|"BT::AnyTypeAllowed"| `TextString` | The `BT::AnyTypeAllowed` port allows any type of value to be passed through it, to achieve this the value for this port, as read from the XML input string is just encoded as a String. |
-|"BT::Any"| `TextString` | Same as `BT::AnyTypeAllowed`, required for compatibility reasons |
-|"BT::NodeStatus"| `Unsigned Integer` | Encodes Node Status using the `BT::NodeStatus` enum and encoding its value as an unsigned Integer. |
-|"SubTreeSpecial"| `TextString`, `TextString` | Encodes both name of the Port of the sub tree as well as the passed value, both as strings. The name is included as the first element and the value as the second element. |
-|"Invalid"| `TextString` | The order of PortID and the String containing the value is reversed in order to simplifie detection. The included string includes exactly the content from the XML which could not be converted to a valid port type. |
-
-### Current State and encoded example
-The following is an encoding example, using the [Hello World](/src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world.xml) behavior tree.
-
-  83 f4 82 64 4d 61 69 6e 83 18 19 80 83 82 18 1e 83 83 00 62 49 44 65 50 72 69 6e 74 83 01 63 6d 73 67 65 48 65 6c 6c 6f 82 02 f4 82 18 1d 81 82 00 19 0b b8 82 18 1e 83 83 00 62 49 44 65 50 72 69 6e 74 83 01 63 6d 73 67 65 57 6f 72 6c 64 82 02 f4 82 65 50 72 69 6e 74 82 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f 
-
+### Current State
+Currently the encoding is functional, exept for handling of SubTrees. The [example document](auto_apms_behavior_codec_examples/behavior/hello_world.xml) is encoded to: 
+`82 82 61 4d 83 18 19 80 82 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 48 65 6c 6c 6f 02 82 18 1e 83 83 00 62 49 44 61 50 83 01 63 6d 73 67 65 57 6f 72 6c 64 02 82 61 50 82 18 36 82 82 00 65 7b 6d 73 67 7d 82 01 64 49 4e 46 4f`
 
 Using a CBOR analysis tool, such as https://cbor.me/, the structure described above is nicley visible.
 
 ## ROS nodes
 The package contains a ROS node for encoding and two decoder variants. The encoder subscribes to a topic with the XML representation of the behavior tree and publishes the encoded version on another topic.
 
-### Encoder
+### Encoder Subscriber
 The `tree_encoder_subscriber` subscribes to XML behavior tree messages and publishes the CBOR-encoded version.
 
 ```bash
 ros2 run auto_apms_behavior_codec tree_encoder_subscriber --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
+```
+
+### Encoder Executor Proxy
+The `tree_encoder_executor_proxy` exposes a `StartTreeExecutor` action server — the same interface as AutoAPMS's `TreeExecutorNode` — and transparently bridges goals to a remote executor through the codec layer.
+
+When a goal is received, the proxy:
+1. **Encodes** the tree XML (if provided) and publishes it over the serialized-tree topic.
+2. **Waits** for a `REGISTERACK` feedback message from the remote executor confirming the tree has been registered. The acknowledgement carries an FNV-1a 32-bit hash of the build request XML; the proxy validates it against its own computed hash and warns on mismatch.
+3. **Sends** a `START` command with the entry-point tree name via the executor-command topic.
+4. **Monitors** `STATE` feedback messages from the remote executor until execution completes (returns to `IDLE`), then reports the result back through the action interface.
+
+If `build_request` is left empty but `entry_point` is specified, encoding is skipped and the proxy sends the `START` command directly (useful when the tree is already registered on the remote side).
+Cancellation is supported: a cancel request forwards a `CANCEL` command to the remote executor.
+
+Internally the proxy runs a periodic state machine (100 ms tick) with the states
+`IDLE → REGISTER_BEHAVIOR → COMMAND_EXECUTOR → AWAIT_RESULT → IDLE`.
+
+**Parameters** (in addition to the common encoder base parameters `node_manifest` and `encoded_out_topic`):
+
+| Parameter | Default | Description |
+|---|---|---|
+| `start_tree_executor_action_name` | `start_tree_executor` | Action server name exposed by the proxy |
+| `executor_command_out_topic` | `executor_command` | Topic to publish `ExecutorCommandMessage` on |
+| `feedback_in_topic` | `executor_feedback_in` | Topic to subscribe to `ExecutorFeedbackMessage` from the remote executor |
+
+```bash
+ros2 run auto_apms_behavior_codec tree_encoder_executor_proxy
 ```
 
 ### Decoder Publisher
@@ -98,7 +107,58 @@ The action goal is populated with:
 ros2 run auto_apms_behavior_codec tree_decoder_executor_client --ros-args --params-file install/auto_apms_behavior_codec_examples/share/auto_apms_behavior_codec_examples/config/goto_codec_params.yaml
 ```
 
-### Sending data to the encoder
+### Decoder Executor
+The `tree_decoder_executor` is the decoder-side counterpart of `TreeEncoderExecutorProxy`. It combines a full `GenericTreeExecutorNode` with the codec decoding pipeline, acting as the remote endpoint that the proxy communicates with via serialized messages.
+
+Unlike `tree_decoder_executor_client` (which forwards decoded XML to a separate executor node via an action client), `tree_decoder_executor` **is** the executor. It directly decodes incoming trees, registers them, receives START/CANCEL commands, executes behavior trees, and publishes feedback — all in a single node.
+
+**Communication flow with the proxy:**
+
+1. Proxy publishes encoded tree → this node decodes it and sends a `REGISTERACK` feedback message containing the FNV-1a 32-bit hash of the decoded XML.
+2. Proxy validates the hash → sends a `START` command.
+3. This node starts execution → periodic `STATE` feedback messages reflect the current `ExecutionState`.
+4. Execution completes → `STATE` returns to `IDLE` → proxy detects completion.
+
+All codec-channel messages (commands and feedback) use the `TYPE:payload` string format (see [Codec Channel Wire Format](#codec-channel-wire-format)).
+
+**Parameters** (in addition to all `GenericTreeExecutorNode` parameters):
+
+| Parameter | Default | Description |
+|---|---|---|
+| `node_manifest` | `[]` | Node manifest identities for building the dictionary |
+| `encoded_in_topic` | `serialized_tree_in` | Topic for incoming serialized tree messages |
+| `executor_command_in_topic` | `executor_command` | Topic for incoming `ExecutorCommandMessage` |
+| `feedback_out_topic` | `executor_feedback_out` | Topic for publishing `ExecutorFeedbackMessage` |
+| `feedback_rate` | `10.0` | Feedback publish rate in Hz |
+
+```bash
+ros2 run auto_apms_behavior_codec tree_decoder_executor
+```
+
+## Codec Channel Wire Format
+
+All messages exchanged between `tree_encoder_executor_proxy` and `tree_decoder_executor` (executor commands and feedback) share a simple `TYPE:payload` text encoding carried in `std_msgs/String` messages. This avoids CBOR overhead for the control channel and makes the messages trivially human-readable.
+
+### Executor Commands (`ExecutorCommandMessage`, proxy → decoder)
+
+| Wire string | Meaning |
+|---|---|
+| `START:<entry_point>` | Start execution of the named tree |
+| `STOP:` | Stop execution |
+| `PAUSE:` | Pause execution |
+| `RESUME:` | Resume paused execution |
+| `CANCEL:` | Cancel execution |
+
+### Executor Feedback (`ExecutorFeedbackMessage`, decoder → proxy)
+
+| Wire string | Meaning |
+|---|---|
+| `STATE:<int>` | Periodic heartbeat; `<int>` is the raw value of `ExecutionState` (IDLE=0, STARTING=1, RUNNING=2, PAUSED=3, HALTED=4) |
+| `REGISTERACK:<hash>` | One-shot acknowledgement sent after a tree is decoded and registered; `<hash>` is the FNV-1a 32-bit hash of the decoded XML, encoded as 8 uppercase hex characters |
+
+The `REGISTERACK` hash lets the proxy verify that the decoder registered exactly the tree it sent, catching potential data corruption or version mismatches.
+
+## Sending data to the encoder
 
 ```bash
 ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: 'XML_HERE'}"
@@ -110,7 +170,6 @@ From a file this could look like (make sure to have `auto_apms_ros2behavior` ins
 TREE_IDENTITY=auto_apms_behavior_codec_examples::hello_world::Main
 ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(ros2 behavior show $TREE_IDENTITY)'}"
 ```
-
 
 # Information about LoRa throughput
 The following is intended as a reference to judge possible lora throughput

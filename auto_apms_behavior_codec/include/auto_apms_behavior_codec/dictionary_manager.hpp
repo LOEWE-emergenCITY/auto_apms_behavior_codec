@@ -1,6 +1,8 @@
 #pragma once
 #include <list>
 #include <map>
+#include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -14,11 +16,16 @@ static std::set<std::string> supported_parameter_types_ = {
 // each node can have multiple ports, this struct represents the name and type of a port for a node in the dictionary
 // the id of the port is its index in the vector of ports for the node, this is may differ between ports with same
 // name/type, if they belong to different nodes
+// 
+// Note on unsupported port types: If a port's original type is not in supported_parameter_types_, the type will be
+// set to "invalid" as a fallback encoding mechanism. The 'supported' flag will be false to indicate that this port
+// lacks native codec support, but the node can still be encoded/decoded using the PortInvalid fallback.
 struct NodePortType
 {
 public:
   std::string name;
-  std::string type;
+  std::string type;  // may be "invalid" if the original port type was unsupported
+  bool supported = true;  // false if this port lacks native codec support (type=="invalid")
 };
 
 // This Class represents a node in the dictionary, i.e., a node type of the tree with its parameters
@@ -52,6 +59,9 @@ public:
   DictionaryNode get_dictionary_info_by_name(const std::string & dictionary_name);
 
   void print_dictionary();
+
+  /// Return the dictionary contents as a human-readable string.
+  std::string print_dictionary_to_string() const;
 
   // get all node manifests used to build this dictionary
   std::vector<auto_apms_behavior_tree::core::NodeManifest> getNodeManifests();

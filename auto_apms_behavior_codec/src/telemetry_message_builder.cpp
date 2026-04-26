@@ -49,6 +49,15 @@ void TelemetryMessageBuilder::addAnyTypeAllowedEntry(
   message_.entries[key] = std::move(e);
 }
 
+void TelemetryMessageBuilder::addStringArrayEntry(
+  const std::string & key, const std::vector<std::string> & value)
+{
+  auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryStringArray>();
+  e->key = key;
+  e->value = value;
+  message_.entries[key] = std::move(e);
+}
+
 std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const
 {
   // Encode as CBOR map: { key: [ type_code(uint), value ] }, exept for AnyTypeAllowed, here { key: [ type_code(uint), [
@@ -103,6 +112,16 @@ std::vector<uint8_t> TelemetryMessageBuilder::getSerializedMessage() const
         cbor_encoder_create_array(&arr, &innerArr, 2);
         cbor_encode_text_string(&innerArr, p->value_type.c_str(), p->value_type.size());
         cbor_encode_text_string(&innerArr, p->value.c_str(), p->value.size());
+        cbor_encoder_close_container_checked(&arr, &innerArr);
+        break;
+      }
+      case TelemetryMessage::EntryType::StringArray: {
+        auto p = static_cast<TelemetryMessage::TelemetryMessageEntryStringArray *>(entry_ptr.get());
+        CborEncoder innerArr;
+        cbor_encoder_create_array(&arr, &innerArr, p->value.size());
+        for (const auto & s : p->value) {
+          cbor_encode_text_string(&innerArr, s.c_str(), s.size());
+        }
         cbor_encoder_close_container_checked(&arr, &innerArr);
         break;
       }
@@ -177,6 +196,7 @@ bool TelemetryMessageBuilder::fromSerializedMessage(const std::vector<uint8_t> &
     bool bool_tmp = false;
     std::string str_tmp;
     std::string type, val;
+    std::vector<std::string> str_arr_tmp;
 
     switch (type_code) {
       case TelemetryMessage::EntryType::Int:
@@ -213,6 +233,22 @@ bool TelemetryMessageBuilder::fromSerializedMessage(const std::vector<uint8_t> &
         val.resize(ivlen + 1);
         if (cbor_value_copy_text_string(&innerIt, &val[0], &ivlen, &innerIt) != CborNoError) return false;
         val.resize(ivlen);
+        if (cbor_value_leave_container(&arrIt, &innerIt) != CborNoError) return false;
+        break;
+      }
+      case TelemetryMessage::EntryType::StringArray: {
+        if (!cbor_value_is_array(&arrIt)) return false;
+        CborValue innerIt;
+        if (cbor_value_enter_container(&arrIt, &innerIt) != CborNoError) return false;
+        while (!cbor_value_at_end(&innerIt)) {
+          size_t slen = 0;
+          if (cbor_value_get_string_length(&innerIt, &slen) != CborNoError) return false;
+          std::string s;
+          s.resize(slen + 1);
+          if (cbor_value_copy_text_string(&innerIt, &s[0], &slen, &innerIt) != CborNoError) return false;
+          s.resize(slen);
+          str_arr_tmp.push_back(std::move(s));
+        }
         if (cbor_value_leave_container(&arrIt, &innerIt) != CborNoError) return false;
         break;
       }
@@ -256,6 +292,13 @@ bool TelemetryMessageBuilder::fromSerializedMessage(const std::vector<uint8_t> &
         e->key = key;
         e->value_type = type;
         e->value = val;
+        message_.entries[key] = std::move(e);
+        break;
+      }
+      case TelemetryMessage::EntryType::StringArray: {
+        auto e = std::make_unique<TelemetryMessage::TelemetryMessageEntryStringArray>();
+        e->key = key;
+        e->value = std::move(str_arr_tmp);
         message_.entries[key] = std::move(e);
         break;
       }

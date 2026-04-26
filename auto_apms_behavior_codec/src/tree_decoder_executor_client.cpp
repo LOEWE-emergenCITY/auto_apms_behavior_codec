@@ -11,7 +11,7 @@ TreeDecoderExecutorClient::TreeDecoderExecutorClient(const rclcpp::NodeOptions &
   RCLCPP_INFO(this->get_logger(), "Action client created for '%s'", params.start_tree_executor_action_name.c_str());
 }
 
-void TreeDecoderExecutorClient::onTreeDecoded(const std::string & xml_string)
+void TreeDecoderExecutorClient::onTreeDecoded(const std::string & xml_string, const std::string & /*encoded_bytes_hash*/)
 {
   if (!action_client_->action_server_is_ready()) {
     RCLCPP_WARN(this->get_logger(), "Action server not available, skipping tree execution");
@@ -91,10 +91,5 @@ void TreeDecoderExecutorClient::resultCallback(const GoalHandle::WrappedResult &
 
 }  // namespace auto_apms_behavior_codec
 
-int main(int argc, char * argv[])
-{
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<auto_apms_behavior_codec::TreeDecoderExecutorClient>());
-  rclcpp::shutdown();
-  return 0;
-}
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(auto_apms_behavior_codec::TreeDecoderExecutorClient)
