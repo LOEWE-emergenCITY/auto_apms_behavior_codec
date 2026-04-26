@@ -23,18 +23,16 @@ void BehaviorTreeEncoderBase::setupEncoder()
     params.node_manifest.begin(), params.node_manifest.end());
   dictionary_manager_ = std::make_shared<DictionaryManager>(manifest_ids);
 
-  RCLCPP_INFO(this->get_logger(), "Encoder will use the following dictionary:");
-  dictionary_manager_->print_dictionary();
+  RCLCPP_INFO(
+    this->get_logger(), "Encoder will use the following dictionary:\n%s",
+    dictionary_manager_->print_dictionary_to_string().c_str());
 
   // Set up publisher for encoded messages
   encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
     params.encoded_out_topic, 10);
 }
 
-std::shared_ptr<DictionaryManager> BehaviorTreeEncoderBase::getDictionaryManager() const
-{
-  return dictionary_manager_;
-}
+std::shared_ptr<DictionaryManager> BehaviorTreeEncoderBase::getDictionaryManager() const { return dictionary_manager_; }
 
 auto_apms_behavior_tree::core::NodeManifest BehaviorTreeEncoderBase::getNodeManifest() const
 {
@@ -179,8 +177,7 @@ bool BehaviorTreeEncoderBase::readTreeDefinitionFromDocument(
       }
     }
 
-    RCLCPP_INFO(
-      this->get_logger(), "Successfully parsed tree document with %zu trees", document_out->trees.size());
+    RCLCPP_INFO(this->get_logger(), "Successfully parsed tree document with %zu trees", document_out->trees.size());
     return true;
 
   } catch (const std::exception & e) {
@@ -212,22 +209,30 @@ bool BehaviorTreeEncoderBase::readTreeDefinitionFromXML(
 
 bool BehaviorTreeEncoderBase::encodeAndPublish(const std::string & tree_xml)
 {
-  std::unique_ptr<behavior_tree_representation::Document> document;
-  bool ok = readTreeDefinitionFromXML(tree_xml, document);
-
-  if (!ok || !document) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to parse XML for encoding");
+  try {
+    publishEncoded(encodeToBytes(tree_xml));
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "encodeAndPublish failed: %s", e.what());
     return false;
   }
+}
 
-  std::vector<uint8_t> encoded_data = encode(*document);
+std::vector<uint8_t> BehaviorTreeEncoderBase::encodeToBytes(const std::string & tree_xml)
+{
+  std::unique_ptr<behavior_tree_representation::Document> document;
+  if (!readTreeDefinitionFromXML(tree_xml, document) || !document) {
+    throw std::runtime_error("Failed to parse or encode XML");
+  }
+  return encode(*document);
+}
 
-  auto encoded_msg = auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage();
-  encoded_msg.serialized_tree_message = encoded_data;
-  encoded_publisher_->publish(encoded_msg);
-
+void BehaviorTreeEncoderBase::publishEncoded(const std::vector<uint8_t> & encoded_data)
+{
+  auto msg = auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage();
+  msg.serialized_tree_message = encoded_data;
+  encoded_publisher_->publish(msg);
   RCLCPP_INFO(this->get_logger(), "Published encoded message of length %zu", encoded_data.size());
-  return true;
 }
 
 }  // namespace auto_apms_behavior_codec

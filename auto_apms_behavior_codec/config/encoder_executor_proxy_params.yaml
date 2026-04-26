@@ -5,14 +5,14 @@ auto_apms_behavior_codec::encoder_executor_proxy_params:
     read_only: true
     description: Action name for the StartTreeExecutor action server exposed by this proxy.
 
-  executor_command_topic:
+  executor_command_out_topic:
     type: string
     default_value: "executor_command"
     read_only: true
     description: Topic name for outgoing executor command messages.
 
-  telemetry_topic:
+  feedback_in_topic:
     type: string
-    default_value: "serialized_telemetry_in"
+    default_value: "executor_feedback_in"
     read_only: true
-    description: Topic name for incoming telemetry messages from the remote executor.
+    description: Topic name for incoming executor feedback messages from the remote executor.

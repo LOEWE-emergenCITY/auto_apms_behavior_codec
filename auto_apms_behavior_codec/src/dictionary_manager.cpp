@@ -171,15 +171,23 @@ DictionaryNode DictionaryManager::get_dictionary_info_by_id(uint32_t dictionary_
 
 void DictionaryManager::print_dictionary()
 {
-  std::cout << "Dictionary contents:" << std::endl;
-  for (const auto & entry : dictionary_map_) {
-    const DictionaryNode & node = entry.second;
-    std::cout << "Node Name: " << node.name << ", ID: " << node.id << ", Supported: " << node.supported << std::endl;
+  std::cout << print_dictionary_to_string();
+}
+
+std::string DictionaryManager::print_dictionary_to_string() const
+{
+  std::ostringstream oss;
+  oss << "Dictionary contents (" << dictionary_map_.size() << " nodes):\n";
+  for (const auto & [name, node] : dictionary_map_) {
+    oss << "  [" << node.id << "] " << node.name
+        << " (supported=" << (node.supported ? "true" : "false")
+        << ", " << node.port_types.size() << " port(s))\n";
     for (size_t i = 0; i < node.port_types.size(); ++i) {
-      const auto & port_type = node.port_types[i];
-      std::cout << "  Port Name: " << port_type.name << ", Type: " << port_type.type << " ID: " << i << std::endl;
+      oss << "    port[" << i << "] name='" << node.port_types[i].name
+          << "' type='" << node.port_types[i].type << "'\n";
     }
   }
+  return oss.str();
 }
 
 DictionaryNode::DictionaryNode(bool supported, uint32_t id, std::string name, std::vector<NodePortType> port_types)

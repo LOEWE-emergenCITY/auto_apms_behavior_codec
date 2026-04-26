@@ -13,7 +13,7 @@ public:
   explicit TreeDecoderPublisher(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 protected:
-  void onTreeDecoded(const std::string & xml_string) override;
+  void onTreeDecoded(const std::string & xml_string, const std::string & encoded_bytes_hash) override;
 
 private:
   decoder_publisher_params::ParamListener param_listener_;

@@ -6,17 +6,17 @@
 #include <gtest/gtest.h>
 
 #include "auto_apms_behavior_codec/executor_command.hpp"
-#include "auto_apms_behavior_codec/executor_telemetry.hpp"
+#include "auto_apms_behavior_codec/executor_feedback.hpp"
 #include "auto_apms_behavior_codec/tree_encoder_executor_proxy.hpp"
 #include "auto_apms_behavior_codec_interfaces/msg/executor_command_message.hpp"
-#include "auto_apms_behavior_codec_interfaces/msg/serialized_telemetry_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/executor_feedback_message.hpp"
 #include "auto_apms_interfaces/action/start_tree_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 using namespace std::chrono_literals;
 using auto_apms_behavior_codec::ExecutionState;
-using auto_apms_behavior_codec::ExecutorTelemetry;
+using auto_apms_behavior_codec::ExecutorFeedback;
 using StartTreeExecutor = auto_apms_interfaces::action::StartTreeExecutor;
 using GoalHandleClient = rclcpp_action::ClientGoalHandle<StartTreeExecutor>;
 
@@ -31,9 +31,9 @@ protected:
 
     action_client_ = rclcpp_action::create_client<StartTreeExecutor>(helper_node_, "start_tree_executor");
 
-    telemetry_publisher_ =
-      helper_node_->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>(
-        "serialized_telemetry_in", 10);
+    feedback_publisher_ =
+      helper_node_->create_publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>(
+        "executor_feedback_in", 10);
 
     received_commands_.clear();
     command_subscription_ =
@@ -56,14 +56,11 @@ protected:
     proxy_node_.reset();
   }
 
-  void publishTelemetry(ExecutionState state, const std::vector<std::string> & behaviors = {})
+  void publishStateFeedback(ExecutionState state)
   {
-    ExecutorTelemetry telemetry;
-    telemetry.state = state;
-    telemetry.behaviors = behaviors;
-    auto msg = auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage();
-    msg.serialized_telemetry_message = telemetry.encode();
-    telemetry_publisher_->publish(msg);
+    auto msg = auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage();
+    msg.executor_feedback_message = ExecutorFeedback::makeState(state).encode();
+    feedback_publisher_->publish(msg);
   }
 
   std::shared_future<GoalHandleClient::SharedPtr> sendGoal(
@@ -122,8 +119,8 @@ protected:
   std::shared_ptr<auto_apms_behavior_codec::TreeEncoderExecutorProxy> proxy_node_;
   rclcpp::Node::SharedPtr helper_node_;
   rclcpp_action::Client<StartTreeExecutor>::SharedPtr action_client_;
-  rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>::SharedPtr
-    telemetry_publisher_;
+  rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>::SharedPtr
+    feedback_publisher_;
   rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage>::SharedPtr
     command_subscription_;
   std::vector<std::string> received_commands_;
@@ -154,7 +151,7 @@ TEST_F(TreeEncoderExecutorProxyTest, SkipEncodingSendsStartCommand)
 {
   ASSERT_TRUE(waitForActionServer());
 
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
   spinFor(200ms);
 
   auto goal_future = sendGoal("", "", "my_tree");
@@ -174,9 +171,9 @@ TEST_F(TreeEncoderExecutorProxyTest, SkipEncodingSendsStartCommand)
     << "Expected START:my_tree command";
 
   // Complete the goal so proxy returns to IDLE
-  publishTelemetry(ExecutionState::RUNNING);
+  publishStateFeedback(ExecutionState::RUNNING);
   spinFor(200ms);
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
 
   auto result_future = action_client_->async_get_result(goal_handle);
   ASSERT_TRUE(spinUntilReady(result_future, 5s));
@@ -186,7 +183,7 @@ TEST_F(TreeEncoderExecutorProxyTest, FullStateMachineExecution)
 {
   ASSERT_TRUE(waitForActionServer());
 
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
   spinFor(200ms);
 
   auto goal_future = sendGoal("", "", "my_tree");
@@ -205,13 +202,13 @@ TEST_F(TreeEncoderExecutorProxyTest, FullStateMachineExecution)
     5s));
 
   // Simulate executor state transitions
-  publishTelemetry(ExecutionState::STARTING);
+  publishStateFeedback(ExecutionState::STARTING);
   spinFor(200ms);
-  publishTelemetry(ExecutionState::RUNNING);
+  publishStateFeedback(ExecutionState::RUNNING);
   spinFor(200ms);
 
   // Execution completes
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
 
   auto result_future = action_client_->async_get_result(goal_handle);
   ASSERT_TRUE(spinUntilReady(result_future, 10s)) << "Timed out waiting for result";
@@ -225,7 +222,7 @@ TEST_F(TreeEncoderExecutorProxyTest, CancelDuringExecution)
 {
   ASSERT_TRUE(waitForActionServer());
 
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
   spinFor(200ms);
 
   auto goal_future = sendGoal("", "", "my_tree");
@@ -235,7 +232,7 @@ TEST_F(TreeEncoderExecutorProxyTest, CancelDuringExecution)
 
   // Wait for state machine to send START and executor to be running
   spinFor(500ms);
-  publishTelemetry(ExecutionState::RUNNING);
+  publishStateFeedback(ExecutionState::RUNNING);
   spinFor(200ms);
 
   // Request cancellation
@@ -254,7 +251,7 @@ TEST_F(TreeEncoderExecutorProxyTest, CancelDuringExecution)
     << "Expected CANCEL command";
 
   // Simulate executor returning to IDLE after cancel
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
 
   auto result_future = action_client_->async_get_result(goal_handle);
   ASSERT_TRUE(spinUntilReady(result_future, 10s)) << "Timed out waiting for cancelled result";
@@ -267,7 +264,7 @@ TEST_F(TreeEncoderExecutorProxyTest, RejectSecondGoalWhileBusy)
 {
   ASSERT_TRUE(waitForActionServer());
 
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
   spinFor(200ms);
 
   auto goal1_future = sendGoal("", "", "tree_1");
@@ -284,9 +281,9 @@ TEST_F(TreeEncoderExecutorProxyTest, RejectSecondGoalWhileBusy)
   EXPECT_EQ(goal2_handle, nullptr) << "Second goal should be rejected while proxy is busy";
 
   // Clean up first goal
-  publishTelemetry(ExecutionState::RUNNING);
+  publishStateFeedback(ExecutionState::RUNNING);
   spinFor(200ms);
-  publishTelemetry(ExecutionState::IDLE);
+  publishStateFeedback(ExecutionState::IDLE);
 
   auto result_future = action_client_->async_get_result(goal1_handle);
   spinUntilReady(result_future, 5s);

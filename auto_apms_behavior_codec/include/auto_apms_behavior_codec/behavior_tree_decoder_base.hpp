@@ -26,7 +26,9 @@ protected:
   auto_apms_behavior_tree::core::NodeManifest getNodeManifest() const;
 
   /// Called when a tree has been successfully decoded to XML.
-  virtual void onTreeDecoded(const std::string & xml_string) = 0;
+  /// \param xml_string  The reconstructed XML.
+  /// \param encoded_bytes_hash  FNV-1a hash of the raw encoded bytes (use for ACK correlation).
+  virtual void onTreeDecoded(const std::string & xml_string, const std::string & encoded_bytes_hash) = 0;
 
 private:
   void setupDecoder();

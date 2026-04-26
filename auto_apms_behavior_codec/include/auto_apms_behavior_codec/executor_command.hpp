@@ -1,30 +1,26 @@
 #pragma once
 
 #include <string>
+#include <utility>
+
+#include "auto_apms_behavior_codec/util.hpp"
 
 namespace auto_apms_behavior_codec
 {
 
 /**
  * @brief Command types sent to a remote executor via ExecutorCommandMessage.
- *
- * Commands are serialized as `"TYPE:payload"` strings where the type is the enum name
- * and the payload is command-specific (e.g. a tree name for START).
  */
 enum class ExecutorCommandType
 {
-  START,   ///< Start tree execution. Payload: tree identity, e.g. `"TreeName(arg1=val1)"`.
-  STOP,    ///< Stop tree execution (reserved for future use).
-  PAUSE,   ///< Pause tree execution (reserved for future use).
-  RESUME,  ///< Resume tree execution (reserved for future use).
-  CANCEL   ///< Cancel current tree execution. Payload is typically empty.
+  UNKNOWN, ///< Unrecognized command type (returned by ExecutorCommand::decode() on parse failure).
+  START,   ///< Start tree execution. Payload: entry-point tree name.
+  STOP,    ///< Stop tree execution (halts cleanly).
+  PAUSE,   ///< Pause tree execution.
+  RESUME,  ///< Resume a paused execution.
+  CANCEL,  ///< Cancel (terminate) current tree execution. Payload is typically empty.
 };
 
-/**
- * @brief Convert an ExecutorCommandType to its string representation.
- * @param type The command type.
- * @return Uppercase string name of the command (e.g. `"START"`).
- */
 inline std::string executorCommandTypeToString(ExecutorCommandType type)
 {
   switch (type) {
@@ -44,14 +40,52 @@ inline std::string executorCommandTypeToString(ExecutorCommandType type)
 }
 
 /**
- * @brief Format an executor command string.
- * @param type The command type.
- * @param payload Command-specific payload (may be empty).
- * @return Formatted string `"TYPE:payload"`.
+ * @brief Executor command message using the `"TYPE:payload"` wire format.
+ *
+ * Commands are sent from a TreeEncoderExecutorProxy to a remote TreeDecoderExecutor.
+ * Use the static factory methods to construct commands and call encode() to serialize:
+ *
+ * @code
+ * ExecutorCommand::makeStart("MainTree").encode()  →  "START:MainTree"
+ * ExecutorCommand::makeCancel().encode()            →  "CANCEL:"
+ * @endcode
  */
-inline std::string formatExecutorCommand(ExecutorCommandType type, const std::string & payload)
+struct ExecutorCommand : public TypePayloadStringMessage
 {
-  return executorCommandTypeToString(type) + ":" + payload;
-}
+  ExecutorCommandType type{ExecutorCommandType::UNKNOWN};
+  std::string payload;
+
+  ExecutorCommand() = default;
+  ExecutorCommand(ExecutorCommandType t, std::string p = {})
+  : type(t), payload(std::move(p))
+  {
+  }
+
+  static ExecutorCommand makeStart(const std::string & entry_point)
+  {
+    return {ExecutorCommandType::START, entry_point};
+  }
+  static ExecutorCommand makeStop() { return {ExecutorCommandType::STOP}; }
+  static ExecutorCommand makePause() { return {ExecutorCommandType::PAUSE}; }
+  static ExecutorCommand makeResume() { return {ExecutorCommandType::RESUME}; }
+  static ExecutorCommand makeCancel() { return {ExecutorCommandType::CANCEL}; }
+
+  std::string encode() const override
+  {
+    return format(executorCommandTypeToString(type), payload);
+  }
+
+  /// Decode a `"TYPE:payload"` string. Returns a command with type UNKNOWN on parse failure.
+  static ExecutorCommand decode(const std::string & msg)
+  {
+    auto [type_str, pay] = split(msg);
+    if (type_str == "START")  return {ExecutorCommandType::START,  pay};
+    if (type_str == "STOP")   return {ExecutorCommandType::STOP,   pay};
+    if (type_str == "PAUSE")  return {ExecutorCommandType::PAUSE,  pay};
+    if (type_str == "RESUME") return {ExecutorCommandType::RESUME, pay};
+    if (type_str == "CANCEL") return {ExecutorCommandType::CANCEL, pay};
+    return {};
+  }
+};
 
 }  // namespace auto_apms_behavior_codec

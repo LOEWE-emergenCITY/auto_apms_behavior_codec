@@ -39,6 +39,7 @@ FetchContent_MakeAvailable(tinycbor)
 # Add export library
 add_library(${PROJECT_NAME} SHARED
   src/telemetry_message_builder.cpp
+  src/util.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -248,7 +249,8 @@ if(BUILD_TESTING)
 
   # Unit tests
   ament_add_gtest(test_unit
-    test/test_executor_telemetry.cpp
+    test/test_type_payload_string_message.cpp
+    test/test_executor_feedback.cpp
     test/test_executor_command.cpp
   )
   target_link_libraries(test_unit

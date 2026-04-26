@@ -19,43 +19,17 @@ TreeEncoderExecutorProxy::TreeEncoderExecutorProxy(const rclcpp::NodeOptions & o
     std::bind(&TreeEncoderExecutorProxy::handleAccepted, this, std::placeholders::_1));
 
   command_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage>(
-    params.executor_command_topic, 10);
+    params.executor_command_out_topic, 10);
 
-  telemetry_subscription_ =
-    this->create_subscription<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>(
-      params.telemetry_topic, 10,
-      std::bind(&TreeEncoderExecutorProxy::telemetryCallback, this, std::placeholders::_1));
+  feedback_subscription_ =
+    this->create_subscription<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>(
+      params.feedback_in_topic, 10,
+      std::bind(&TreeEncoderExecutorProxy::feedbackCallback, this, std::placeholders::_1));
 
   RCLCPP_INFO(
-    this->get_logger(), "Executor proxy action server created on '%s', command topic '%s', telemetry topic '%s'",
-    params.start_tree_executor_action_name.c_str(), params.executor_command_topic.c_str(),
-    params.telemetry_topic.c_str());
-}
-
-bool TreeEncoderExecutorProxy::validateNodeManifest(const std::string & encoded_manifest)
-{
-  if (encoded_manifest.empty()) {
-    return true;
-  }
-
-  try {
-    auto manifest = auto_apms_behavior_tree::core::NodeManifest::decode(encoded_manifest);
-    auto node_names = manifest.getNodeNames();
-    auto dict = getDictionaryManager();
-
-    for (const auto & name : node_names) {
-      auto entry = dict->get_dictionary_info_by_name(name);
-      if (!entry.supported) {
-        RCLCPP_WARN(
-          this->get_logger(), "Node '%s' from goal manifest is not known by the encoder dictionary", name.c_str());
-        return false;
-      }
-    }
-    return true;
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to decode node manifest from goal: %s", e.what());
-    return false;
-  }
+    this->get_logger(), "Executor proxy action server created on '%s', command topic '%s', feedback topic '%s'",
+    params.start_tree_executor_action_name.c_str(), params.executor_command_out_topic.c_str(),
+    params.feedback_in_topic.c_str());
 }
 
 rclcpp_action::GoalResponse TreeEncoderExecutorProxy::handleGoal(
@@ -80,10 +54,6 @@ rclcpp_action::GoalResponse TreeEncoderExecutorProxy::handleGoal(
         goal->build_handler.c_str(), SUPPORTED_BUILD_HANDLER);
       return rclcpp_action::GoalResponse::REJECT;
     }
-    if (!validateNodeManifest(goal->node_manifest)) {
-      RCLCPP_WARN(this->get_logger(), "Rejecting goal: node manifest contains unknown nodes");
-      return rclcpp_action::GoalResponse::REJECT;
-    }
   }
 
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -101,24 +71,32 @@ void TreeEncoderExecutorProxy::handleAccepted(std::shared_ptr<GoalHandle> goal_h
   active_goal_handle_ = goal_handle;
   const auto goal = goal_handle->get_goal();
   entry_point_ = goal->entry_point;
-  expected_tree_names_.clear();
+  expected_ack_hash_.clear();
+  received_ack_hash_.clear();
+  pending_encoded_data_.clear();
   seen_execution_active_ = false;
   cancel_command_sent_ = false;
 
   if (!goal->build_request.empty()) {
-    // Use TreeDocument for XML introspection to extract tree names
+    // Use TreeDocument to extract tree names
     auto_apms_behavior_tree::core::TreeDocument tree_doc;
-    tree_doc.mergeString(goal->build_request, true);
+    tree_doc.mergeString(goal->build_request);
     tree_doc.registerNodes(getNodeManifest());
-    expected_tree_names_ = tree_doc.getAllTreeNames();
 
-    RCLCPP_INFO(this->get_logger(), "Encoding tree with %zu sub-tree(s)", expected_tree_names_.size());
-
-    // Encode and publish the serialized tree
-    if (!encodeAndPublish(goal->build_request)) {
-      abortGoal("Failed to encode tree XML");
+    // Encode now; the encoded bytes will be published on the first tick of REGISTER_BEHAVIOR
+    try {
+      pending_encoded_data_ = encodeToBytes(goal->build_request);
+    } catch (const std::exception & e) {
+      abortGoal(std::string("Failed to encode tree XML: ") + e.what());
       return;
     }
+    // Hash the encoded bytes — the decoder hashes the same bytes before decoding, guaranteeing a match.
+    expected_ack_hash_ = computeUniqueStringHash(
+      std::string(pending_encoded_data_.begin(), pending_encoded_data_.end()));
+
+    RCLCPP_INFO(
+      this->get_logger(), "Encoded tree with %zu sub-tree(s) (hash=%s)",
+      tree_doc.getAllTreeNames().size(), expected_ack_hash_.c_str());
 
     proxy_state_ = ProxyState::REGISTER_BEHAVIOR;
   } else {
@@ -127,11 +105,11 @@ void TreeEncoderExecutorProxy::handleAccepted(std::shared_ptr<GoalHandle> goal_h
   }
 
   // Start periodic state machine timer
-  state_machine_timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(100), std::bind(&TreeEncoderExecutorProxy::stateMachineCallback, this));
+  proxy_execution_callback_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(100), std::bind(&TreeEncoderExecutorProxy::proxyExecutionCallback, this));
 }
 
-void TreeEncoderExecutorProxy::stateMachineCallback()
+void TreeEncoderExecutorProxy::proxyExecutionCallback()
 {
   if (!active_goal_handle_) {
     resetStateMachine();
@@ -147,21 +125,23 @@ void TreeEncoderExecutorProxy::stateMachineCallback()
         return;
       }
 
-      // Check if all expected trees are registered on the remote executor
-      bool all_registered = true;
-      for (const auto & name : expected_tree_names_) {
-        if (std::find(latest_telemetry_.behaviors.begin(), latest_telemetry_.behaviors.end(), name) ==
-            latest_telemetry_.behaviors.end())
-        {
-          all_registered = false;
-          break;
-        }
+      // Publish the pre-encoded tree on the first tick (deferred from handleAccepted)
+      if (!pending_encoded_data_.empty()) {
+        publishEncoded(pending_encoded_data_);
+        pending_encoded_data_.clear();
       }
 
-      if (all_registered) {
-        RCLCPP_INFO(this->get_logger(), "All behavior trees registered on remote executor");
+      // Wait for REGISTERACK from the remote executor and verify the hash
+      if (!received_ack_hash_.empty()) {
+        if (received_ack_hash_ != expected_ack_hash_) {
+          abortGoal(
+            "REGISTERACK hash mismatch: expected '" + expected_ack_hash_ +
+            "', received '" + received_ack_hash_ + "'");
+          return;
+        }
+        RCLCPP_INFO(this->get_logger(), "REGISTERACK confirmed (hash=%s)", received_ack_hash_.c_str());
+
         if (entry_point_.empty()) {
-          // Register-only mode: no entry_point means skip execution
           completeGoal(
             StartTreeExecutor::Result::TREE_RESULT_NOT_SET, "Behavior trees registered (register-only mode)");
         } else {
@@ -179,7 +159,7 @@ void TreeEncoderExecutorProxy::stateMachineCallback()
 
       // Send START command with the entry point
       auto cmd_msg = auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage();
-      cmd_msg.executor_command_message = formatExecutorCommand(ExecutorCommandType::START, entry_point_);
+      cmd_msg.executor_command_message = ExecutorCommand::makeStart(entry_point_).encode();
       command_publisher_->publish(cmd_msg);
       RCLCPP_INFO(this->get_logger(), "Sent start command: '%s'", cmd_msg.executor_command_message.c_str());
 
@@ -188,12 +168,12 @@ void TreeEncoderExecutorProxy::stateMachineCallback()
     }
 
     case ProxyState::AWAIT_RESULT: {
-      const auto state = latest_telemetry_.state;
+      const auto state = latest_state_;
 
       // Handle cancellation: send CANCEL command to remote executor
       if (is_canceling && !cancel_command_sent_) {
         auto cmd_msg = auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage();
-        cmd_msg.executor_command_message = formatExecutorCommand(ExecutorCommandType::CANCEL, "");
+        cmd_msg.executor_command_message = ExecutorCommand::makeCancel().encode();
         command_publisher_->publish(cmd_msg);
         cancel_command_sent_ = true;
         RCLCPP_INFO(this->get_logger(), "Sent cancel command to remote executor");
@@ -227,12 +207,14 @@ void TreeEncoderExecutorProxy::resetStateMachine()
 {
   proxy_state_ = ProxyState::IDLE;
   active_goal_handle_.reset();
-  expected_tree_names_.clear();
+  pending_encoded_data_.clear();
+  expected_ack_hash_.clear();
+  received_ack_hash_.clear();
   entry_point_.clear();
   seen_execution_active_ = false;
   cancel_command_sent_ = false;
-  if (state_machine_timer_) {
-    state_machine_timer_->cancel();
+  if (proxy_execution_callback_timer_) {
+    proxy_execution_callback_timer_->cancel();
   }
 }
 
@@ -266,10 +248,20 @@ void TreeEncoderExecutorProxy::cancelGoal(const std::string & message)
   resetStateMachine();
 }
 
-void TreeEncoderExecutorProxy::telemetryCallback(
-  const auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage::SharedPtr msg)
+void TreeEncoderExecutorProxy::feedbackCallback(
+  const auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage::SharedPtr msg)
 {
-  latest_telemetry_ = ExecutorTelemetry::decode(msg->serialized_telemetry_message);
+  const auto feedback = ExecutorFeedback::decode(msg->executor_feedback_message);
+  switch (feedback.type) {
+    case ExecutorFeedbackType::STATE:
+      latest_state_ = feedback.state;
+      break;
+    case ExecutorFeedbackType::REGISTERACK:
+      received_ack_hash_ = feedback.build_hash;
+      break;
+    default:
+      break;
+  }
 }
 
 }  // namespace auto_apms_behavior_codec

@@ -11,7 +11,7 @@ TreeDecoderExecutorClient::TreeDecoderExecutorClient(const rclcpp::NodeOptions &
   RCLCPP_INFO(this->get_logger(), "Action client created for '%s'", params.start_tree_executor_action_name.c_str());
 }
 
-void TreeDecoderExecutorClient::onTreeDecoded(const std::string & xml_string)
+void TreeDecoderExecutorClient::onTreeDecoded(const std::string & xml_string, const std::string & /*encoded_bytes_hash*/)
 {
   if (!action_client_->action_server_is_ready()) {
     RCLCPP_WARN(this->get_logger(), "Action server not available, skipping tree execution");

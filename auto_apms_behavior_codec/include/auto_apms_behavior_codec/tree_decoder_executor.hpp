@@ -7,9 +7,9 @@
 #include "auto_apms_behavior_codec/behavior_tree_decoder_base.hpp"
 #include "auto_apms_behavior_codec/decoder_executor_params.hpp"
 #include "auto_apms_behavior_codec/executor_command.hpp"
-#include "auto_apms_behavior_codec/executor_telemetry.hpp"
+#include "auto_apms_behavior_codec/executor_feedback.hpp"
 #include "auto_apms_behavior_codec_interfaces/msg/executor_command_message.hpp"
-#include "auto_apms_behavior_codec_interfaces/msg/serialized_telemetry_message.hpp"
+#include "auto_apms_behavior_codec_interfaces/msg/executor_feedback_message.hpp"
 #include "auto_apms_behavior_tree/executor/generic_executor_node.hpp"
 
 namespace auto_apms_behavior_codec
@@ -28,7 +28,7 @@ namespace auto_apms_behavior_codec
  * |------------|------------------------------|---------------------------------|------------------------------------|
  * | Subscribe  | `serialized_tree_in`         | `SerializedTreeMessage`         | Receive CBOR-encoded tree from proxy |
  * | Subscribe  | `executor_command`           | `ExecutorCommandMessage`        | Receive START / CANCEL commands    |
- * | Publish    | `serialized_telemetry_out`   | `SerializedTelemetryMessage`    | Report state + registered trees    |
+ * | Publish    | `executor_feedback_out`      | `ExecutorFeedbackMessage`       | Report state + registered trees    |
  *
  * ### Interaction with TreeEncoderExecutorProxy
  *
@@ -54,9 +54,9 @@ namespace auto_apms_behavior_codec
  *
  * | Parameter                | Default                    | Description                                |
  * |--------------------------|----------------------------|--------------------------------------------|
- * | `executor_command_topic` | `executor_command`         | Incoming command topic                     |
- * | `telemetry_topic`        | `serialized_telemetry_out` | Outgoing telemetry topic                   |
- * | `telemetry_rate`         | `10.0`                     | Telemetry publish rate in Hz               |
+ * | `executor_command_in_topic` | `executor_command`         | Incoming command topic                     |
+ * | `feedback_out_topic`        | `executor_feedback_out`    | Outgoing feedback topic                    |
+ * | `feedback_rate`          | `10.0`                     | Feedback publish rate in Hz                |
  *
  * In addition, all GenericTreeExecutorNode parameters (tick_rate, groot2_port, etc.) are available.
  */
@@ -67,7 +67,7 @@ public:
 
 protected:
   /// Called by BehaviorTreeDecoderBase when a tree has been successfully decoded.
-  void onTreeDecoded(const std::string & xml_string) override;
+  void onTreeDecoded(const std::string & xml_string, const std::string & encoded_bytes_hash) override;
 
 private:
   /// Set up the executor member, command subscription, and telemetry interfaces.
@@ -77,10 +77,10 @@ private:
   void commandCallback(
     const auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage::SharedPtr msg);
 
-  /// Periodically encode and publish telemetry (state + registered tree names).
-  void publishTelemetry();
+  /// Periodically encode and publish executor state.
+  void publishStateFeedback();
 
-  // Codec parameters (executor_command_topic, telemetry_topic, telemetry_rate)
+  // Codec parameters (executor_command_in_topic, feedback_out_topic, feedback_rate)
   decoder_executor_params::ParamListener param_listener_;
 
   // Behavior tree executor (initialized after construction via one-shot timer)
@@ -90,9 +90,9 @@ private:
   rclcpp::TimerBase::SharedPtr init_timer_;
   rclcpp::Subscription<auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage>::SharedPtr
     command_subscription_;
-  rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTelemetryMessage>::SharedPtr
-    telemetry_publisher_;
-  rclcpp::TimerBase::SharedPtr telemetry_timer_;
+  rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>::SharedPtr
+    feedback_publisher_;
+  rclcpp::TimerBase::SharedPtr state_feedback_timer_;
 
   // Registered behaviors are kept in a TreeDocument
   auto_apms_behavior_tree::core::TreeDocument decoding_verification_doc_;

@@ -1,6 +1,8 @@
 #pragma once
 #include <list>
 #include <map>
+#include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -52,6 +54,9 @@ public:
   DictionaryNode get_dictionary_info_by_name(const std::string & dictionary_name);
 
   void print_dictionary();
+
+  /// Return the dictionary contents as a human-readable string.
+  std::string print_dictionary_to_string() const;
 
   // get all node manifests used to build this dictionary
   std::vector<auto_apms_behavior_tree::core::NodeManifest> getNodeManifests();

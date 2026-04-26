@@ -1,5 +1,6 @@
 #include "auto_apms_behavior_codec/behavior_tree_decoder_base.hpp"
 
+#include "auto_apms_behavior_codec/util.hpp"
 #include "auto_apms_behavior_tree_core/node/node_model_type.hpp"
 
 namespace auto_apms_behavior_codec
@@ -215,6 +216,10 @@ void BehaviorTreeDecoderBase::encodedInCallback(
 {
   RCLCPP_INFO(this->get_logger(), "Received encoded message of size %zu bytes", msg->serialized_tree_message.size());
 
+  // Hash the raw bytes now, before decoding, so the hash can be passed to onTreeDecoded for ACK correlation.
+  const auto & bytes = msg->serialized_tree_message;
+  const std::string encoded_bytes_hash = computeUniqueStringHash(std::string(bytes.begin(), bytes.end()));
+
   behavior_tree_representation::Document document;
   bool ok = document.deserialize(msg->serialized_tree_message, dictionary_manager_);
 
@@ -228,7 +233,7 @@ void BehaviorTreeDecoderBase::encodedInCallback(
   std::string xml_string = reconstructXML(document);
   if (!xml_string.empty()) {
     RCLCPP_INFO(this->get_logger(), "Reconstructed XML:\n%s", xml_string.c_str());
-    onTreeDecoded(xml_string);
+    onTreeDecoded(xml_string, encoded_bytes_hash);
   } else {
     RCLCPP_ERROR(this->get_logger(), "Failed to decode serialized tree message");
   }

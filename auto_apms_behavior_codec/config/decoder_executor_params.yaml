@@ -1,18 +1,18 @@
 auto_apms_behavior_codec::decoder_executor_params:
-  executor_command_topic:
+  executor_command_in_topic:
     type: string
     default_value: "executor_command"
     read_only: true
     description: Topic name for incoming executor command messages.
 
-  telemetry_topic:
+  feedback_out_topic:
     type: string
-    default_value: "serialized_telemetry_out"
+    default_value: "executor_feedback_out"
     read_only: true
-    description: Topic name for publishing serialized telemetry messages.
+    description: Topic name for publishing executor feedback messages.
 
-  telemetry_rate:
+  feedback_rate:
     type: double
     default_value: 10.0
     read_only: true
-    description: Rate in Hz for publishing telemetry.
+    description: Rate in Hz for publishing feedback.

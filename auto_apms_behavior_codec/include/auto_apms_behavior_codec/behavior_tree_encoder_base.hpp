@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -52,6 +53,16 @@ protected:
    */
   bool readTreeDefinitionFromXML(
     std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document> & document_out);
+
+  /**
+   * @brief Encode tree XML into CBOR bytes without publishing.
+   *
+   * @throws std::runtime_error if parsing or encoding fails.
+   */
+  std::vector<uint8_t> encodeToBytes(const std::string & tree_xml);
+
+  /// Publish a pre-encoded CBOR byte vector as a SerializedTreeMessage.
+  void publishEncoded(const std::vector<uint8_t> & encoded_data);
 
   /// Convenience method: encode tree XML and publish the result as a SerializedTreeMessage.
   bool encodeAndPublish(const std::string & tree_xml);

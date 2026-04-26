@@ -4,7 +4,7 @@ namespace auto_apms_behavior_codec
 {
 
 TreeEncoderSubscriber::TreeEncoderSubscriber(const rclcpp::NodeOptions & options)
-: BehaviorTreeEncoderBase("behavior_tree_encoder", options), param_listener_(this)
+: BehaviorTreeEncoderBase("tree_encoder_subscriber", options), param_listener_(this)
 {
   const auto params = param_listener_.get_params();
 
