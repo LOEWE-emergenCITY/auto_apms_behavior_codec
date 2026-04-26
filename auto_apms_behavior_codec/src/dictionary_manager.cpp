@@ -31,30 +31,35 @@ bool DictionaryManager::build_dictionary(
 
     // iterate through ports, check if they are supported and add them to the node dictionary entry
     for (const auto & port_info : port_infos) {
+      NodePortType node_port_type;
+      node_port_type.name = port_info.port_name;
       if (supported_parameter_types_.find(port_info.port_type) == supported_parameter_types_.end()) {
-        RCLCPP_WARN(
+        RCLCPP_DEBUG(
           rclcpp::get_logger("DictionaryManager"),
-          "Node %s has unsupported parameter type %s for port %s. This node will not be supported for "
-          "encoding/decoding.",
+          "Node %s has unsupported parameter type %s for port %s. Will encode as 'invalid' port.",
           nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
+        // Mark unsupported ports with the "invalid" type for fallback encoding
+        node_port_type.type = "invalid";
+        node_port_type.supported = false;
         has_unsupported_parameter = true;
-        unsupported_nodes++;
-        break;
       } else {
-        NodePortType node_port_type;
-        node_port_type.name = port_info.port_name;
         node_port_type.type = port_info.port_type;
+        node_port_type.supported = true;
         RCLCPP_DEBUG(
           rclcpp::get_logger("DictionaryManager"), "Node %s has supported parameter type %s for port %s.",
           nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
-        port_types.push_back(node_port_type);
       }
+      if(has_unsupported_parameter) {
+        unsupported_nodes++;
+      }
+      port_types.push_back(node_port_type);
       // for debugging, print port info
       // std::cout << "  Port Name: " << port_info.port_name << ", Type: " << port_info.port_type << ", Default: " <<
       // port_info.port_default << ", Has Default: " << port_info.port_has_default << ", Description: " <<
       // port_info.port_description << ", Direction: " << static_cast<int>(port_info.port_direction) << std::endl;
     }
     // std::cout << "Node Type: " << model.type<< std::endl;
+    // Always add nodes to dictionary, even if they have unsupported ports (they will be encoded using "invalid" type)
     DictionaryNode info(!has_unsupported_parameter, id_counter++, nodes_iterator->first, port_types);
     // std::cout << "Added node to dictionary: " << info.name << " with ID " << info.id << " and " <<
     // info.number_int_params << " int params, " << info.number_float_params << " float params, " <<
@@ -78,7 +83,7 @@ bool DictionaryManager::build_dictionary(
       auto node_models = manifest_resource.getNodeModel();
       std::map<std::string, auto_apms_behavior_tree::NodeModel>::iterator nodes_iterator;
 
-      // iterate through node models and add to dictionary if supported
+      // iterate through node models and add to dictionary
       for (nodes_iterator = node_models.begin(); nodes_iterator != node_models.end(); nodes_iterator++) {
         bool has_unsupported_parameter = false;
         auto_apms_behavior_tree::NodeModel model = nodes_iterator->second;
@@ -87,30 +92,36 @@ bool DictionaryManager::build_dictionary(
 
         // iterate through ports, check if they are supported and add them to the node dictionary entry
         for (const auto & port_info : port_infos) {
+          NodePortType node_port_type;
+          node_port_type.name = port_info.port_name;
+          
           if (supported_parameter_types_.find(port_info.port_type) == supported_parameter_types_.end()) {
             RCLCPP_WARN(
               rclcpp::get_logger("DictionaryManager"),
-              "Node %s has unsupported parameter type %s for port %s. This node will not be supported for "
-              "encoding/decoding.",
+                "Node %s has unsupported parameter type %s for port %s. Will encode as 'invalid' port.",
               nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
+            // Mark unsupported ports with the "invalid" type for fallback encoding
+            node_port_type.type = "invalid";
+            node_port_type.supported = false;
             has_unsupported_parameter = true;
-            unsupported_nodes++;
-            break;
           } else {
-            NodePortType node_port_type;
-            node_port_type.name = port_info.port_name;
             node_port_type.type = port_info.port_type;
+            node_port_type.supported = true;
             RCLCPP_DEBUG(
               rclcpp::get_logger("DictionaryManager"), "Node %s has supported parameter type %s for port %s.",
               nodes_iterator->first.c_str(), port_info.port_type.c_str(), port_info.port_name.c_str());
-            port_types.push_back(node_port_type);
           }
+          if(has_unsupported_parameter) {
+            unsupported_nodes++;
+          }
+          port_types.push_back(node_port_type);
           // for debugging, print port info
           // std::cout << "  Port Name: " << port_info.port_name << ", Type: " << port_info.port_type << ", Default: "
           // << port_info.port_default << ", Has Default: " << port_info.port_has_default << ", Description: " <<
           // port_info.port_description << ", Direction: " << static_cast<int>(port_info.port_direction) << std::endl;
         }
         // std::cout << "Node Type: " << model.type<< std::endl;
+        // Always add nodes to dictionary, even if they have unsupported ports (they will be encoded using "invalid" type)
         DictionaryNode info(!has_unsupported_parameter, id_counter++, nodes_iterator->first, port_types);
         // std::cout << "Added node to dictionary: " << info.name << " with ID " << info.id << " and " <<
         // info.number_int_params << " int params, " << info.number_float_params << " float params, " <<
@@ -123,7 +134,8 @@ bool DictionaryManager::build_dictionary(
     }
   }
   RCLCPP_INFO(
-    rclcpp::get_logger("DictionaryManager"), "Finished building dictionary. Total nodes: %u, Unsupported nodes: %u",
+    rclcpp::get_logger("DictionaryManager"),
+    "Finished building dictionary. Total nodes: %u, Unsupported nodes: %u, Unsupported nodes will be encoded using 'invalid' port fallback.",
     id_counter - 1, unsupported_nodes);
 
   // next get node modells for all ids
