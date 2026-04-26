@@ -14,11 +14,16 @@ static std::set<std::string> supported_parameter_types_ = {
 // each node can have multiple ports, this struct represents the name and type of a port for a node in the dictionary
 // the id of the port is its index in the vector of ports for the node, this is may differ between ports with same
 // name/type, if they belong to different nodes
+// 
+// Note on unsupported port types: If a port's original type is not in supported_parameter_types_, the type will be
+// set to "invalid" as a fallback encoding mechanism. The 'supported' flag will be false to indicate that this port
+// lacks native codec support, but the node can still be encoded/decoded using the PortInvalid fallback.
 struct NodePortType
 {
 public:
   std::string name;
-  std::string type;
+  std::string type;  // may be "invalid" if the original port type was unsupported
+  bool supported = true;  // false if this port lacks native codec support (type=="invalid")
 };
 
 // This Class represents a node in the dictionary, i.e., a node type of the tree with its parameters
