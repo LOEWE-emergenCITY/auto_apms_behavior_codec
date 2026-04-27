@@ -31,7 +31,8 @@ The document object is encoded as a CBOR array with an element per tree and a bo
 A behavior tree is encoded as a CBOR array with 2 elements, first the name of the tree and second the root node. Potential room for improvement could be using as short as possible tree names.
 
 ### Node
-A node is encoded as a CBOR array with 3 elements, first the type code of the node, second an array of the node's ports and third an array off child nodes. All arrays may also have size 0. Empty arrays of children are omitted.
+A node is encoded as a CBOR array with 3 elements, first the type code of the node, second an array of the node's ports and third an array off child nodes. All arrays may also have size 0.
+If the node has parameters which are not ports, these are added as a 4th element, an array of arrays, each with two strings, first the name of the parameter and second its value. This is a workaround for parameters which are not ports, but still need to be encoded. If there are no such parameters, this element is omitted.
 
 ### Ports
 Each port consists of an array, the elements of which depend on the type of port. Currently all ports contain the port id (just a mapping of the ports position in the node) this can be omitted if it is known that the ports are always ordered in a specific way.
@@ -169,6 +170,12 @@ From a file this could look like (make sure to have `auto_apms_ros2behavior` ins
 ```bash
 TREE_IDENTITY=auto_apms_behavior_codec_examples::hello_world::Main
 ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(ros2 behavior show $TREE_IDENTITY)'}"
+```
+
+or for a file directly (change the path to the file accordingly):
+
+```bash
+ros2 topic pub --once /xml_in auto_apms_behavior_codec_interfaces/msg/TreeXmlMessage "{tree_xml_message: '$(cat src/pkg/auto_apms_behavior_codec/auto_apms_behavior_codec_examples/behavior/hello_world_with_conditions.xml )'}"
 ```
 
 # Information about LoRa throughput

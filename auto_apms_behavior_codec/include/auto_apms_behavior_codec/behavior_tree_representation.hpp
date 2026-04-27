@@ -256,6 +256,8 @@ struct Node
   std::vector<std::shared_ptr<Port>> ports;     // ports of the node, same order as in xml
   std::vector<std::shared_ptr<Node>> children;  // children of the node, same order as in xml
 
+  std::vector<std::pair<std::string, std::string>> additional_parameters; // additional node parameters, which are just encoded as string key value pairs
+
   void print() const;
   // serializes the Node using a given CBOR encoder object using the given dictionary as reference for node and port
   // type codes

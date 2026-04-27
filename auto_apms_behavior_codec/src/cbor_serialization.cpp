@@ -39,8 +39,11 @@ bool Node::serialize(
   uint8_t arrayBuf[1024];
   cbor_encoder_init(&arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
-  uint arraySize = children.size() != 0 ? 3 : 2;
-  // create array containing the nodes basic information: type code, an array of ports and an array of children
+  // Calculate array size: type code (1) + ports array (1) + children array (1, always present) + additional_parameters array (1 if present)
+  uint arraySize = 3;  // type code + ports array + children array (always present)
+  if (additional_parameters.size() != 0) arraySize++;
+  
+  // create array containing the nodes basic information: type code, an array of ports, an array of children, and additional parameters (if present)
   cbor_encoder_create_array(encoder, &arrayEncoder, arraySize);
   cbor_encode_uint(&arrayEncoder, dictionary_manager->get_dictionary_info_by_name(type_name).id);
 
@@ -57,16 +60,38 @@ bool Node::serialize(
   // close the ports array
   cbor_encoder_close_container_checked(&arrayEncoder, &portsArrayEncoder);
 
-  if (children.size() != 0) {
-    CborEncoder childrenArrayEncoder;
-    uint8_t childrenArrayBuf[1024];  // allocate a large enough buffer for the children array
-    cbor_encoder_init(&childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
-    cbor_encoder_create_array(&arrayEncoder, &childrenArrayEncoder, children.size());
-    for (std::shared_ptr<Node> child : children) {
-      child->serialize(&childrenArrayEncoder, dictionary_manager);
+  // Always encode children array, even if empty
+  CborEncoder childrenArrayEncoder;
+  uint8_t childrenArrayBuf[1024];  // allocate a large enough buffer for the children array
+  cbor_encoder_init(&childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
+  cbor_encoder_create_array(&arrayEncoder, &childrenArrayEncoder, children.size());
+  for (std::shared_ptr<Node> child : children) {
+    child->serialize(&childrenArrayEncoder, dictionary_manager);
+  }
+  // close the children array
+  cbor_encoder_close_container_checked(&arrayEncoder, &childrenArrayEncoder);
+
+  // Encode additional parameters as 4th element if present
+  if (additional_parameters.size() != 0) {
+    CborEncoder paramsArrayEncoder;
+    uint8_t paramsArrayBuf[1024];  // allocate a large enough buffer for the additional parameters array
+    cbor_encoder_init(&paramsArrayEncoder, paramsArrayBuf, sizeof(paramsArrayBuf), 0);
+    
+    // create array for additional parameters (array of [key, value] pairs)
+    cbor_encoder_create_array(&arrayEncoder, &paramsArrayEncoder, additional_parameters.size());
+    for (const auto & param : additional_parameters) {
+      CborEncoder paramPairEncoder;
+      uint8_t paramPairBuf[512];
+      cbor_encoder_init(&paramPairEncoder, paramPairBuf, sizeof(paramPairBuf), 0);
+      
+      // create [key, value] pair array
+      cbor_encoder_create_array(&paramsArrayEncoder, &paramPairEncoder, 2);
+      cbor_encode_text_string(&paramPairEncoder, param.first.c_str(), param.first.size());
+      cbor_encode_text_string(&paramPairEncoder, param.second.c_str(), param.second.size());
+      cbor_encoder_close_container_checked(&paramsArrayEncoder, &paramPairEncoder);
     }
-    // close the children array
-    cbor_encoder_close_container_checked(&arrayEncoder, &childrenArrayEncoder);
+    // close the additional parameters array
+    cbor_encoder_close_container_checked(&arrayEncoder, &paramsArrayEncoder);
   }
 
   // close the main array
