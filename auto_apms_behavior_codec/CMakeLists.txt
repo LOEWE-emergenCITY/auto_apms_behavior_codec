@@ -252,10 +252,15 @@ if(BUILD_TESTING)
     test/test_type_payload_string_message.cpp
     test/test_executor_feedback.cpp
     test/test_executor_command.cpp
+    test/test_tree_encoding_decoding.cpp
   )
   target_link_libraries(test_unit
     ${PROJECT_NAME}
     auto_apms_behavior_tree::auto_apms_behavior_tree
+    tinycbor
+    behavior_tree_representation
+    behavior_tree_decoder_base
+    behavior_tree_encoder_base
   )
   target_include_directories(test_unit PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
