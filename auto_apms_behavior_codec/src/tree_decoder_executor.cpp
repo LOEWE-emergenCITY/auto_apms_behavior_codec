@@ -35,19 +35,20 @@ void TreeDecoderExecutor::setupExecutorAndCodecInterfaces()
   feedback_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>(
     params.feedback_out_topic, 10);
 
-  // Periodic feedback publication
-  const double rate_hz = params.feedback_rate;
-  const auto period =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0 / rate_hz));
-  state_feedback_timer_ = this->create_wall_timer(period, std::bind(&TreeDecoderExecutor::publishStateFeedback, this));
+  // Poll for state changes at the executor tick rate; only publishes when state actually changes.
+  const double tick_rate_s = executor_->getExecutorParameters().tick_rate;
+  const auto poll_period =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(tick_rate_s));
+  state_feedback_timer_ = this->create_wall_timer(
+    poll_period, std::bind(&TreeDecoderExecutor::publishStateFeedback, this));
 
   // Prepare buffer tree document
   decoding_verification_doc_.registerNodes(getNodeManifest());
   behavior_library_doc_.registerNodes(getNodeManifest());
 
   RCLCPP_INFO(
-    this->get_logger(), "Codec interfaces: command='%s', feedback='%s' (%.1f Hz)",
-    params.executor_command_in_topic.c_str(), params.feedback_out_topic.c_str(), rate_hz);
+    this->get_logger(), "Codec interfaces: command='%s', feedback='%s' (on state change)",
+    params.executor_command_in_topic.c_str(), params.feedback_out_topic.c_str());
 }
 
 void TreeDecoderExecutor::onTreeDecoded(const std::string & xml_string, const std::string & encoded_bytes_hash)
@@ -149,8 +150,11 @@ void TreeDecoderExecutor::commandCallback(
 
 void TreeDecoderExecutor::publishStateFeedback()
 {
+  const auto current_state = executor_->getExecutionState();
+  if (current_state == last_published_state_) return;
+  last_published_state_ = current_state;
   auto msg = auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage();
-  msg.executor_feedback_message = ExecutorFeedback::makeState(executor_->getExecutionState()).encode();
+  msg.executor_feedback_message = ExecutorFeedback::makeState(current_state).encode();
   feedback_publisher_->publish(msg);
 }
 

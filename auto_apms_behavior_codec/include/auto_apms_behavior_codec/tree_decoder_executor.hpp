@@ -56,7 +56,7 @@ namespace auto_apms_behavior_codec
  * |--------------------------|----------------------------|--------------------------------------------|
  * | `executor_command_in_topic` | `executor_command`         | Incoming command topic                     |
  * | `feedback_out_topic`        | `executor_feedback_out`    | Outgoing feedback topic                    |
- * | `feedback_rate`          | `10.0`                     | Feedback publish rate in Hz                |
+ * | (none beyond above)      |                            |                                            |
  *
  * In addition, all GenericTreeExecutorNode parameters (tick_rate, groot2_port, etc.) are available.
  */
@@ -77,10 +77,10 @@ private:
   void commandCallback(
     const auto_apms_behavior_codec_interfaces::msg::ExecutorCommandMessage::SharedPtr msg);
 
-  /// Periodically encode and publish executor state.
+  /// Timer callback that checks for state changes and publishes feedback.
   void publishStateFeedback();
 
-  // Codec parameters (executor_command_in_topic, feedback_out_topic, feedback_rate)
+  // Codec parameters (executor_command_in_topic, feedback_out_topic)
   decoder_executor_params::ParamListener param_listener_;
 
   // Behavior tree executor (initialized after construction via one-shot timer)
@@ -93,6 +93,7 @@ private:
   rclcpp::Publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>::SharedPtr
     feedback_publisher_;
   rclcpp::TimerBase::SharedPtr state_feedback_timer_;
+  ExecutionState last_published_state_{ExecutionState::IDLE};
 
   // Registered behaviors are kept in a TreeDocument
   auto_apms_behavior_tree::core::TreeDocument decoding_verification_doc_;
