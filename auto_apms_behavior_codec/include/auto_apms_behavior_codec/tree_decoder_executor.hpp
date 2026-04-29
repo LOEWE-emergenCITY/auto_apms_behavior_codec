@@ -56,7 +56,7 @@ namespace auto_apms_behavior_codec
  * |-----------------------------|----------------------------|--------------------------------------------||
  * | `executor_command_in_topic` | `executor_command`         | Incoming command topic                     |
  * | `feedback_out_topic`        | `executor_feedback_out`    | Outgoing feedback topic                    |
- * | `feedback_rate`             | `10.0`                     | Max feedback publish rate in Hz (independent from `tick_rate`) |
+ * | `feedback_interval`         | `2.0`                      | Interval in seconds between state feedback publications (independent from `tick_rate`) |
  *
  * In addition, all GenericTreeExecutorNode parameters (tick_rate, groot2_port, etc.) are available.
  */

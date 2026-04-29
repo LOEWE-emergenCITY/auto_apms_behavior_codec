@@ -35,9 +35,9 @@ void TreeDecoderExecutor::setupExecutorAndCodecInterfaces()
   feedback_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::ExecutorFeedbackMessage>(
     params.feedback_out_topic, 10);
 
-  // Poll for state changes at the configured feedback rate; only publishes when state actually changes.
+  // Poll for state changes at the configured feedback interval; only publishes when state actually changes.
   const auto poll_period = std::chrono::duration_cast<std::chrono::nanoseconds>(
-    std::chrono::duration<double>(1.0 / params.feedback_rate));
+    std::chrono::duration<double>(params.feedback_interval));
   state_feedback_timer_ = this->create_wall_timer(
     poll_period, std::bind(&TreeDecoderExecutor::publishStateFeedback, this));
 
