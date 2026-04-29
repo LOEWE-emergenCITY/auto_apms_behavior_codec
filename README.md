@@ -129,7 +129,7 @@ All codec-channel messages (commands and feedback) use the `TYPE:payload` string
 | `encoded_in_topic` | `serialized_tree_in` | Topic for incoming serialized tree messages |
 | `executor_command_in_topic` | `executor_command` | Topic for incoming `ExecutorCommandMessage` |
 | `feedback_out_topic` | `executor_feedback_out` | Topic for publishing `ExecutorFeedbackMessage` |
-| `feedback_rate` | `10.0` | Feedback publish rate in Hz |
+| `feedback_rate` | `0.5` | Maximum feedback publish rate in Hz |
 
 ```bash
 ros2 run auto_apms_behavior_codec tree_decoder_executor

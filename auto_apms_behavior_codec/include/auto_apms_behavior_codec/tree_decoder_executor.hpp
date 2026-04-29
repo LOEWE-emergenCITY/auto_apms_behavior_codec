@@ -52,11 +52,11 @@ namespace auto_apms_behavior_codec
  *
  * Additional parameters (decoder_executor_params):
  *
- * | Parameter                | Default                    | Description                                |
- * |--------------------------|----------------------------|--------------------------------------------|
+ * | Parameter                   | Default                    | Description                                |
+ * |-----------------------------|----------------------------|--------------------------------------------||
  * | `executor_command_in_topic` | `executor_command`         | Incoming command topic                     |
  * | `feedback_out_topic`        | `executor_feedback_out`    | Outgoing feedback topic                    |
- * | (none beyond above)      |                            |                                            |
+ * | `feedback_rate`             | `10.0`                     | Max feedback publish rate in Hz (independent from `tick_rate`) |
  *
  * In addition, all GenericTreeExecutorNode parameters (tick_rate, groot2_port, etc.) are available.
  */

@@ -11,4 +11,12 @@ auto_apms_behavior_codec::decoder_executor_params:
     read_only: true
     description: Topic name for publishing executor feedback messages.
 
+  feedback_rate:
+    type: double
+    default_value: 0.5
+    read_only: true
+    description: Maximum rate (Hz) at which executor is publishing feedback.
+    validation:
+      gt<>: [0.0]
+
 
