@@ -145,6 +145,7 @@ add_library(behavior_tree_decoder_base STATIC
 target_include_directories(behavior_tree_decoder_base PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(behavior_tree_decoder_base PUBLIC
+  ${PROJECT_NAME}
   dictionary_manager
   rclcpp::rclcpp
   auto_apms_behavior_tree_core::auto_apms_behavior_tree_core
@@ -195,7 +196,6 @@ target_include_directories(tree_decoder_executor_component PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(tree_decoder_executor_component PUBLIC
   behavior_tree_decoder_base
-  ${PROJECT_NAME}
   rclcpp_components::component
   auto_apms_behavior_tree::auto_apms_behavior_tree
   ${auto_apms_behavior_codec_interfaces_TARGETS}
