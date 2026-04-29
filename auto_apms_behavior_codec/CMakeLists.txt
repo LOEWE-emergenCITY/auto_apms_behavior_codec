@@ -261,6 +261,7 @@ if(BUILD_TESTING)
     behavior_tree_representation
     behavior_tree_decoder_base
     behavior_tree_encoder_base
+    tree_decoder_publisher_component
   )
   target_include_directories(test_unit PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

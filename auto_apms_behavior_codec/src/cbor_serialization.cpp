@@ -7,7 +7,7 @@ std::vector<uint8_t> Document::serialize(
   std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const
 {
   CborEncoder * encoder = new CborEncoder();
-  uint8_t buf[1024];  // allocate a large enough buffer
+  uint8_t buf[2048];  // allocate a large enough buffer
   cbor_encoder_init(encoder, buf, sizeof(buf), 0);
 
   // Top-level array: [was_main_tree_empty, tree1, tree2, ...]
@@ -36,7 +36,7 @@ bool Node::serialize(
   CborEncoder * encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const
 {
   CborEncoder arrayEncoder;
-  uint8_t arrayBuf[1024];
+  uint8_t arrayBuf[2048];
   cbor_encoder_init(&arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
   // Calculate array size: type code (1) + ports array (1) + children array (1, always present) + additional_parameters array (1 if present)
@@ -48,7 +48,7 @@ bool Node::serialize(
   cbor_encode_uint(&arrayEncoder, dictionary_manager->get_dictionary_info_by_name(type_name).id);
 
   CborEncoder portsArrayEncoder;
-  uint8_t portsArrayBuf[1024];  // allocate a large enough buffer for the ports array
+  uint8_t portsArrayBuf[2048];  // allocate a large enough buffer for the ports array
   cbor_encoder_init(&portsArrayEncoder, portsArrayBuf, sizeof(portsArrayBuf), 0);
 
   // create array for ports
@@ -62,7 +62,7 @@ bool Node::serialize(
 
   // Always encode children array, even if empty
   CborEncoder childrenArrayEncoder;
-  uint8_t childrenArrayBuf[1024];  // allocate a large enough buffer for the children array
+  uint8_t childrenArrayBuf[2048];  // allocate a large enough buffer for the children array
   cbor_encoder_init(&childrenArrayEncoder, childrenArrayBuf, sizeof(childrenArrayBuf), 0);
   cbor_encoder_create_array(&arrayEncoder, &childrenArrayEncoder, children.size());
   for (std::shared_ptr<Node> child : children) {
@@ -74,14 +74,14 @@ bool Node::serialize(
   // Encode additional parameters as 4th element if present
   if (additional_parameters.size() != 0) {
     CborEncoder paramsArrayEncoder;
-    uint8_t paramsArrayBuf[1024];  // allocate a large enough buffer for the additional parameters array
+    uint8_t paramsArrayBuf[2048];  // allocate a large enough buffer for the additional parameters array
     cbor_encoder_init(&paramsArrayEncoder, paramsArrayBuf, sizeof(paramsArrayBuf), 0);
     
     // create array for additional parameters (array of [key, value] pairs)
     cbor_encoder_create_array(&arrayEncoder, &paramsArrayEncoder, additional_parameters.size());
     for (const auto & param : additional_parameters) {
       CborEncoder paramPairEncoder;
-      uint8_t paramPairBuf[512];
+      uint8_t paramPairBuf[2048];
       cbor_encoder_init(&paramPairEncoder, paramPairBuf, sizeof(paramPairBuf), 0);
       
       // create [key, value] pair array
@@ -104,7 +104,7 @@ bool Tree::serialize(
   CborEncoder * encoder, std::shared_ptr<auto_apms_behavior_codec::DictionaryManager> dictionary_manager) const
 {
   CborEncoder * arrayEncoder = new CborEncoder();
-  uint8_t arrayBuf[1024];
+  uint8_t arrayBuf[2048];
   cbor_encoder_init(arrayEncoder, arrayBuf, sizeof(arrayBuf), 0);
 
   // create array containing the trees basic information: name and the root node
@@ -122,7 +122,7 @@ bool Tree::serialize(
 bool PortInt::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t portArrayBuf[1024];  // allocate a large enough buffer for the port array
+  uint8_t portArrayBuf[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -136,7 +136,7 @@ bool PortInt::serialize(CborEncoder * encoder) const
 bool PortUInt::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t portArrayBuf[1024];
+  uint8_t portArrayBuf[2048];
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -149,7 +149,7 @@ bool PortUInt::serialize(CborEncoder * encoder) const
 bool PortFloat::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -164,7 +164,7 @@ bool PortFloat::serialize(CborEncoder * encoder) const
 bool PortDouble::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -178,7 +178,7 @@ bool PortDouble::serialize(CborEncoder * encoder) const
 bool PortBool::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -194,7 +194,7 @@ bool PortString::serialize(CborEncoder * encoder) const
 {
   std::cout << " serializing string port" << std::endl;
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -208,7 +208,7 @@ bool PortString::serialize(CborEncoder * encoder) const
 bool PortAnyTypeAllowed::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -225,7 +225,7 @@ bool PortAnyTypeAllowed::serialize(CborEncoder * encoder) const
 bool PortAny::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -242,7 +242,7 @@ bool PortAny::serialize(CborEncoder * encoder) const
 bool PortNodeStatus::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 2);
   cbor_encode_uint(portArrayEncoder, this->getID());
@@ -256,7 +256,7 @@ bool PortNodeStatus::serialize(CborEncoder * encoder) const
 bool PortSubTreeSpecial::serialize(CborEncoder * encoder) const
 {
   CborEncoder * portArrayEncoder = new CborEncoder();
-  uint8_t * portArrayBuf = new uint8_t[1024];  // allocate a large enough buffer for the port array
+  uint8_t * portArrayBuf = new uint8_t[2048];  // allocate a large enough buffer for the port array
   cbor_encoder_init(portArrayEncoder, portArrayBuf, sizeof(portArrayBuf), 0);
   cbor_encoder_create_array(encoder, portArrayEncoder, 3);
   cbor_encode_uint(portArrayEncoder, this->getID());

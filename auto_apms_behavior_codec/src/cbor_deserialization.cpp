@@ -391,12 +391,6 @@ static bool parse_node(
     return false;
   }
 
-  // Advance to next element (additional parameters, if present)
-  if (cbor_value_advance(&nodeIt) != CborNoError && !cbor_value_at_end(&nodeIt)) {
-    std::cerr << "Failed to advance after children array" << std::endl;
-    return false;
-  }
-
   // Parse additional parameters if present
   if (cbor_value_is_array(&nodeIt)) {
     size_t paramsCount = 0;

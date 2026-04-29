@@ -36,6 +36,15 @@ public:
 
   ~BehaviorTreeEncoderBase() override = default;
 
+    /**
+   * @brief Create a TreeDocument from XML and convert it to the internal representation.
+   *
+   * Node manifests known by the DictionaryManager are registered with the document so that
+   * all node types can be resolved.
+   */
+  bool readTreeDefinitionFromXML(
+    std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document> & document_out);
+
 protected:
   /// Encode a behavior tree document into a CBOR byte vector.
   std::vector<uint8_t> encode(behavior_tree_representation::Document & document);
@@ -45,14 +54,7 @@ protected:
     auto_apms_behavior_tree::core::TreeDocument & tree_doc,
     std::unique_ptr<behavior_tree_representation::Document> & document_out);
 
-  /**
-   * @brief Create a TreeDocument from XML and convert it to the internal representation.
-   *
-   * Node manifests known by the DictionaryManager are registered with the document so that
-   * all node types can be resolved.
-   */
-  bool readTreeDefinitionFromXML(
-    std::string tree_xml, std::unique_ptr<behavior_tree_representation::Document> & document_out);
+
 
   /**
    * @brief Encode tree XML into CBOR bytes without publishing.
