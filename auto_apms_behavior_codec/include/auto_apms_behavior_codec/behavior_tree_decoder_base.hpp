@@ -21,10 +21,13 @@ public:
 
   ~BehaviorTreeDecoderBase() override = default;
 
-protected:
   /// Access the node manifest built from the base parameters.
   auto_apms_behavior_tree::core::NodeManifest getNodeManifest() const;
 
+  /// Reconstruct XML from an internal Document representation.
+  std::string reconstructXML(const behavior_tree_representation::Document & document);
+
+protected:
   /// Called when a tree has been successfully decoded to XML.
   /// \param xml_string  The reconstructed XML.
   /// \param encoded_bytes_hash  FNV-1a hash of the raw encoded bytes (use for ACK correlation).
@@ -32,8 +35,6 @@ protected:
 
 private:
   void setupDecoder();
-
-  std::string reconstructXML(const behavior_tree_representation::Document & document);
 
   // adds the tree described by the passed behavior_tree_representation::Tree to the TreeDocument and returns the tree element which was added
   auto_apms_behavior_tree::core::TreeDocument::TreeElement getTreeElementFromTree(

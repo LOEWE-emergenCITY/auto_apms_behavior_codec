@@ -130,6 +130,32 @@ behavior_tree_representation::Node BehaviorTreeEncoderBase::getNodeFromElement(
     }
   }
 
+  //handle additional parameters, detected as attributes in the xml which are not ports according to the dictionary, but still should be encoded as string key value pairs for potential use in the behavior tree execution environment
+  auto_apms_behavior_tree::core::TreeDocument::NodeElement copy_element = node_element;
+  tinyxml2::XMLElement * node_xml = copy_element.getXMLElement();
+  const tinyxml2::XMLAttribute * attr = node_xml->FirstAttribute();
+  while (attr) {
+    std::cout << "Processing attribute: " << attr->Name() << " = " << attr->Value() << std::endl;
+    std::string attr_name = attr->Name();
+    // check if this attribute name is not already handled as a port
+    bool is_port = false;
+    for (const auto & port_info : dict_entry.port_types) {
+      if (port_info.name == attr_name) {
+        is_port = true;
+        break;
+      }
+    }
+    if (!is_port) {
+      // this is an additional parameter, add it to the node's additional_parameters vector
+      result.additional_parameters.push_back({attr_name, attr->Value()});
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Attribute '%s' with value '%s' on node '%s' is not defined as a port in the dictionary. Adding it as an additional parameter.",
+        attr_name.c_str(), attr->Value(), result.type_name.c_str());
+    }
+    attr = attr->Next();
+  }
+
   // Recursively process children
   if (node_element.hasChildren()) {
     auto child_it = node_element.begin();

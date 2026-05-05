@@ -135,6 +135,14 @@ static auto_apms_behavior_tree::core::TreeDocument::NodeElement recursiveNodeCon
       port_value.c_str(), node.type_name.c_str());
   }
 
+  //add additional parameters as attributes to the XML element
+  for (const auto & [param_name, param_value] : node.additional_parameters) {
+    xml_element->SetAttribute(param_name.c_str(), param_value.c_str());
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("behavior_tree_decoder"), "Set additional parameter attribute '%s'='%s' on node '%s'", param_name.c_str(),
+      param_value.c_str(), node.type_name.c_str());
+  }
+
   // recursively construct child nodes
   for (const auto & child : node.children) {
     if (!child) {

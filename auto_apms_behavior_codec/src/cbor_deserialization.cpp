@@ -352,36 +352,141 @@ static bool parse_node(
     // No advance or continue here! Let the loop and iterator advance naturally for all port types.
   }
 
-  // leave ports array to advance nodeIt to next element (children or end)
+  // leave ports array to advance nodeIt to next element (children array)
   if (cbor_value_leave_container(&nodeIt, &portsIt) != CborNoError) {
     std::cerr << "Failed to leave ports array" << std::endl;
     return false;
   }
 
-  // now nodeIt points to next element; if it's an array treat as children
+  // Parse children array (always present, may be empty)
+  if (!cbor_value_is_array(&nodeIt)) {
+    std::cerr << "Expected children array after ports" << std::endl;
+    return false;
+  }
+
+  size_t childrenCount = 0;
+  if (cbor_value_get_array_length(&nodeIt, &childrenCount) != CborNoError) {
+    std::cerr << "Failed to get children array length" << std::endl;
+    return false;
+  }
+
+  CborValue childrenIt;
+  if (cbor_value_enter_container(&nodeIt, &childrenIt) != CborNoError) {
+    std::cerr << "Failed to enter children array" << std::endl;
+    return false;
+  }
+
+  for (size_t ci = 0; ci < childrenCount; ++ci) {
+    Node child;
+    if (!parse_node(&childrenIt, dict_mgr, child)) {
+      std::cerr << "Failed to parse child node" << std::endl;
+      return false;
+    }
+    out_node.children.push_back(std::make_shared<Node>(child));
+  }
+
+  // leave children array to advance nodeIt to next element (additional parameters, if present)
+  if (cbor_value_leave_container(&nodeIt, &childrenIt) != CborNoError) {
+    std::cerr << "Failed to leave children array" << std::endl;
+    return false;
+  }
+
+  // Parse additional parameters if present
   if (cbor_value_is_array(&nodeIt)) {
-    size_t childrenCount = 0;
-    if (cbor_value_get_array_length(&nodeIt, &childrenCount) != CborNoError) {
-      std::cerr << "Failed to get children array length" << std::endl;
+    size_t paramsCount = 0;
+    if (cbor_value_get_array_length(&nodeIt, &paramsCount) != CborNoError) {
+      std::cerr << "Failed to get additional parameters array length" << std::endl;
       return false;
     }
-    CborValue childrenIt;
-    if (cbor_value_enter_container(&nodeIt, &childrenIt) != CborNoError) {
-      std::cerr << "Failed to enter children array" << std::endl;
+
+    CborValue paramsIt;
+    if (cbor_value_enter_container(&nodeIt, &paramsIt) != CborNoError) {
+      std::cerr << "Failed to enter additional parameters array" << std::endl;
       return false;
     }
-    for (size_t ci = 0; ci < childrenCount; ++ci) {
-      Node child;
-      if (!parse_node(&childrenIt, dict_mgr, child)) {
-        std::cerr << "Failed to parse child node" << std::endl;
+
+    for (size_t pi = 0; pi < paramsCount; ++pi) {
+      if (cbor_value_at_end(&paramsIt)) {
+        std::cerr << "Reached end of additional parameters at index " << pi << std::endl;
+        break;
+      }
+
+      if (!cbor_value_is_array(&paramsIt)) {
+        std::cerr << "Additional parameter is not an array at index " << pi << std::endl;
+        cbor_value_leave_container(&nodeIt, &paramsIt);
         return false;
       }
-      out_node.children.push_back(std::make_shared<Node>(child));
-      // childrenIt is updated by parse_node (it consumes the child and advances to next)
+
+      size_t paramPairLen = 0;
+      if (cbor_value_get_array_length(&paramsIt, &paramPairLen) != CborNoError) {
+        std::cerr << "Failed to get parameter pair length at index " << pi << std::endl;
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      if (paramPairLen != 2) {
+        std::cerr << "Additional parameter pair should have 2 elements, got " << paramPairLen << " at index " << pi << std::endl;
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      CborValue paramPairIt;
+      if (cbor_value_enter_container(&paramsIt, &paramPairIt) != CborNoError) {
+        std::cerr << "Failed to enter parameter pair at index " << pi << std::endl;
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      // Read key
+      size_t keyLen = 0;
+      if (cbor_value_get_string_length(&paramPairIt, &keyLen) != CborNoError) {
+        std::cerr << "Failed to get parameter key length at index " << pi << std::endl;
+        cbor_value_leave_container(&paramsIt, &paramPairIt);
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      std::string key;
+      key.resize(keyLen);
+      if (cbor_value_copy_text_string(&paramPairIt, &key[0], &keyLen, &paramPairIt) != CborNoError) {
+        std::cerr << "Failed to read parameter key at index " << pi << std::endl;
+        cbor_value_leave_container(&paramsIt, &paramPairIt);
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      // Read value
+      size_t valueLen = 0;
+      if (cbor_value_get_string_length(&paramPairIt, &valueLen) != CborNoError) {
+        std::cerr << "Failed to get parameter value length at index " << pi << std::endl;
+        cbor_value_leave_container(&paramsIt, &paramPairIt);
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      std::string value;
+      value.resize(valueLen);
+      if (cbor_value_copy_text_string(&paramPairIt, &value[0], &valueLen, &paramPairIt) != CborNoError) {
+        std::cerr << "Failed to read parameter value at index " << pi << std::endl;
+        cbor_value_leave_container(&paramsIt, &paramPairIt);
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
+
+      out_node.additional_parameters.push_back(std::make_pair(key, value));
+      std::cerr << "[CBOR DEBUG] Decoded additional parameter: key='" << key << "' value='" << value << "'" << std::endl;
+
+      // Leave parameter pair and advance to next
+      if (cbor_value_leave_container(&paramsIt, &paramPairIt) != CborNoError) {
+        std::cerr << "Failed to leave parameter pair at index " << pi << std::endl;
+        cbor_value_leave_container(&nodeIt, &paramsIt);
+        return false;
+      }
     }
-    // leave children array
-    if (cbor_value_leave_container(&nodeIt, &childrenIt) != CborNoError) {
-      std::cerr << "Failed to leave children array" << std::endl;
+
+    // Leave additional parameters array
+    if (cbor_value_leave_container(&nodeIt, &paramsIt) != CborNoError) {
+      std::cerr << "Failed to leave additional parameters array" << std::endl;
       return false;
     }
   }
