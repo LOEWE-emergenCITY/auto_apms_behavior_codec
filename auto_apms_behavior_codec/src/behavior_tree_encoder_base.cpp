@@ -30,6 +30,7 @@ void BehaviorTreeEncoderBase::setupEncoder()
   // Set up publisher for encoded messages
   encoded_publisher_ = this->create_publisher<auto_apms_behavior_codec_interfaces::msg::SerializedTreeMessage>(
     params.encoded_out_topic, 10);
+  RCLCPP_INFO(this->get_logger(), "Encoder will publish encoded messages on topic '%s'", params.encoded_out_topic.c_str());
 }
 
 std::shared_ptr<DictionaryManager> BehaviorTreeEncoderBase::getDictionaryManager() const { return dictionary_manager_; }
@@ -58,12 +59,13 @@ behavior_tree_representation::Node BehaviorTreeEncoderBase::getNodeFromElement(
     auto_apms_behavior_tree::core::TreeDocument::NodeElement copy_element = node_element;
     tinyxml2::XMLElement * node_xml = copy_element.getXMLElement();
     const tinyxml2::XMLAttribute * attr = node_xml->FirstAttribute();
-    uint attr_number = 0;
+    int16_t attr_number = 0;
     while (attr) {
       if (std::string(attr->Name()) == "_autoremap") {
+        // use attribute index as id to match SubTree attribute ordering during decoding
         result.ports.push_back(
           std::make_shared<behavior_tree_representation::PortBool>(
-            std::string(attr->Value()) == "true", result.ports.size()));
+            std::string(attr->Value()) == "true", attr_number));
       } else {
         result.ports.push_back(
           std::make_shared<behavior_tree_representation::PortSubTreeSpecial>(
@@ -76,49 +78,55 @@ behavior_tree_representation::Node BehaviorTreeEncoderBase::getNodeFromElement(
     // Handle ports regularly based on the dictionary entry
     std::map<std::string, std::string> port_values = node_element.getPorts();
 
+    // Use the dictionary index as the encoded port id so decoding can map back to the original port
+    int16_t port_idx = 0;
     for (const auto & port_info : dict_entry.port_types) {
       if (port_values.find(port_info.name) != port_values.end()) {
         std::string port_value = port_values.at(port_info.name);
         std::shared_ptr<behavior_tree_representation::Port> port_ptr;
         try {
           if (port_info.type == "int") {
-            port_ptr =
-              std::make_shared<behavior_tree_representation::PortInt>(std::stoi(port_value), result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortInt>(std::stoi(port_value), port_idx);
           } else if (port_info.type == "unsigned int") {
             port_ptr = std::make_shared<behavior_tree_representation::PortUInt>(
-              static_cast<uint32_t>(std::stoul(port_value)), result.ports.size());
+              static_cast<uint32_t>(std::stoul(port_value)), port_idx);
           } else if (port_info.type == "float") {
-            port_ptr =
-              std::make_shared<behavior_tree_representation::PortFloat>(std::stof(port_value), result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortFloat>(
+              std::stof(port_value), port_idx);
           } else if (port_info.type == "double") {
-            port_ptr =
-              std::make_shared<behavior_tree_representation::PortDouble>(std::stod(port_value), result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortDouble>(
+              std::stod(port_value), port_idx);
           } else if (port_info.type == "std::string") {
-            port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortString>(port_value, port_idx);
           } else if (port_info.type == "bool") {
-            port_ptr =
-              std::make_shared<behavior_tree_representation::PortBool>(port_value == "true", result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortBool>(
+              port_value == "true", port_idx);
           } else if (port_info.type == "BT::AnyTypeAllowed") {
-            port_ptr =
-              std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(port_value, result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortAnyTypeAllowed>(
+              port_value, port_idx);
           } else if (port_info.type == "BT::NodeStatus") {
-            port_ptr = std::make_shared<behavior_tree_representation::PortNodeStatus>(port_value, result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortNodeStatus>(
+              port_value, port_idx);
           } else if (port_info.type == "BT::Any") {
-            port_ptr = std::make_shared<behavior_tree_representation::PortAny>(port_value, result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortAny>(
+              port_value, port_idx);
           } else {
-            port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(port_value, result.ports.size());
+            port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(
+              port_value, port_idx);
           }
         } catch (const std::exception & e) {
           RCLCPP_ERROR(
             this->get_logger(),
             "Failed to convert port value '%s' for port '%s' of type '%s': %s. Including it as invalid.",
             port_value.c_str(), port_info.name.c_str(), port_info.type.c_str(), e.what());
-          port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(port_value, result.ports.size());
+          port_ptr = std::make_shared<behavior_tree_representation::PortInvalid>(
+            port_value, port_idx);
         }
         if (port_ptr) {
           result.ports.push_back(port_ptr);
         }
       }
+      ++port_idx;
     }
   }
 
